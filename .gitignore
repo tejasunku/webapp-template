@@ -137,3 +137,8 @@ dist
 
 #Roo settings
 .roo*
+
+#Claude code stuff
+.swarm/memory.db
+.claude-flow/*
+.claude-flow
