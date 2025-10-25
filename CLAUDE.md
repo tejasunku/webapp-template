@@ -1,6 +1,6 @@
 # Claude Code Configuration - Teja Pattern Development Environment
 
-## =€ CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
+## [CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT]
 
 **ABSOLUTE RULES**:
 1. ALL operations MUST be concurrent/parallel in a single message
@@ -8,7 +8,7 @@
 3. ALWAYS organize files in appropriate subdirectories
 4. **USE CLAUDE CODE'S TASK TOOL** for spawning agents concurrently, not just MCP
 
-### ¡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
+### [GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"]
 
 **MANDATORY PATTERNS**:
 - **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
@@ -17,11 +17,11 @@
 - **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
 - **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
 
-### <¯ CRITICAL: Claude Code Task Tool for Agent Execution
+### [CRITICAL: Claude Code Task Tool for Agent Execution]
 
 **Claude Code's Task tool is the PRIMARY way to spawn agents:**
 ```javascript
-//  CORRECT: Use Claude Code's Task tool for parallel agent execution
+// CORRECT: Use Claude Code's Task tool for parallel agent execution
 [Single Message]:
   Task("Research agent", "Analyze requirements and patterns...", "researcher")
   Task("Coder agent", "Implement core features...", "coder")
@@ -35,7 +35,7 @@
 - `mcp__claude-flow__agent_spawn` - Define agent types for coordination
 - `mcp__claude-flow__task_orchestrate` - Orchestrate high-level workflows
 
-### =Á File Organization Rules
+### [File Organization Rules]
 
 **NEVER save to root folder. Use these directories:**
 - `/src` - Source code files
@@ -45,7 +45,7 @@
 - `/scripts` - Utility scripts
 - `/examples` - Example code
 
-## <× Teja Pattern Development Workflow
+## [Teja Pattern Development Workflow]
 
 ### Core Development Philosophy
 
@@ -53,10 +53,10 @@ This project follows the **Teja Pattern** - a systematic development methodology
 
 **Development Loop:**
 ```
-Intent ’ Resources ’ Responsibilities ’ Formal Models ’ Behavior ’ Schemas ’ Tests ’ Implementation
+Intent -> Resources -> Responsibilities -> Formal Models -> Behavior -> Schemas -> Tests -> Implementation
 ```
 
-### <¯ Milestone-Driven Development with Red-Green-Refactor
+### [Milestone-Driven Development with Red-Green-Refactor]
 
 #### Milestone Testing Strategy
 
@@ -68,13 +68,13 @@ For every milestone, we follow a disciplined **Red-Green-Refactor** cycle:
 
 #### Test Expectations by Category:
 
-** Expected to Pass Initially:**
+**[Expected to Pass Initially:]**
 - Interface tests for existing behavior
 - Tests on current working functionality
 - Shared schema validation for existing contracts
 - Basic service connectivity tests
 
-**L Expected to Fail Initially (Focus Areas):**
+**[Expected to Fail Initially (Focus Areas):]**
 - New feature behavior tests
 - Domain logic for new business rules
 - Integration tests for new service interactions
@@ -116,7 +116,7 @@ make test
 make validate-testing  # Complete testing strategy validation
 ```
 
-## > Available AI Agents (54 Total)
+## [Available AI Agents (54 Total)]
 
 ### Core Development
 `coder`, `reviewer`, `tester`, `planner`, `researcher`
@@ -145,7 +145,7 @@ make validate-testing  # Complete testing strategy validation
 ### Migration & Planning
 `migration-planner`, `swarm-init`
 
-## <¯ Claude Code vs MCP Tools
+## [Claude Code vs MCP Tools]
 
 ### Claude Code Handles ALL EXECUTION:
 - **Task tool**: Spawn and run agents concurrently for actual work
@@ -170,7 +170,7 @@ make validate-testing  # Complete testing strategy validation
 
 **KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
 
-## =€ Agent Execution Flow with Claude Code
+## [Agent Execution Flow with Claude Code]
 
 ### The Correct Pattern:
 
@@ -202,36 +202,36 @@ make validate-testing  # Complete testing strategy validation
   Write "database/schema.sql"
 ```
 
-## =Ë Agent Coordination Protocol
+## [Agent Coordination Protocol]
 
 ### Every Agent Spawned via Task Tool MUST:
 
-**1ã BEFORE Work:**
+**[1 BEFORE Work:]**
 ```bash
 npx claude-flow@alpha hooks pre-task --description "[task]"
 npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
 ```
 
-**2ã DURING Work:**
+**[2 DURING Work:]**
 ```bash
 npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
 npx claude-flow@alpha hooks notify --message "[what was done]"
 ```
 
-**3ã AFTER Work:**
+**[3 AFTER Work:]**
 ```bash
 npx claude-flow@alpha hooks post-task --task-id "[task]"
 npx claude-flow@alpha hooks session-end --export-metrics true
 ```
 
-## <¯ Milestone Development Commands
+## [Milestone Development Commands]
 
 ### Complete Development Workflow
 
 ```bash
 # 1. Generate specifications and behavior
 make workflow-formal        # Complete formal verification workflow
-make workflow-behavior      # Behavior ’ Schemas workflow
+make workflow-behavior      # Behavior -> Schemas workflow
 
 # 2. Create comprehensive test suite
 make agent-test             # Generate interface and domain tests
@@ -277,7 +277,7 @@ make test                  # Full test suite - should all pass
 - Optimization opportunities
 - Documentation tests
 
-## =' Testing Strategy Commands
+## [Testing Strategy Commands]
 
 ### Interface vs Domain Testing
 
@@ -310,7 +310,7 @@ make gherkin-validate      # Check Gherkin syntax and completeness
 make gherkin-coverage      # Analyze scenario coverage
 ```
 
-## =€ Quick Start for New Milestone
+## [Quick Start for New Milestone]
 
 ```bash
 # 1. Set up environment
@@ -325,33 +325,33 @@ make test                   # See what passes vs fails
 
 # 4. Focused implementation cycle
 while [ $? -ne 0 ]; do
-  echo "= Identify highest priority failing test"
-  echo "=' Implement minimal code to make it pass"
+  echo "Identify highest priority failing test"
+  echo "Implement minimal code to make it pass"
   make test
 done
 
 # 5. Final validation
 make validate-testing
-echo " Milestone complete - all tests passing!"
+echo "Milestone complete - all tests passing!"
 ```
 
-## <¯ Success Criteria
+## [Success Criteria]
 
 ### Milestone Completion Requirements:
--  **All Tests Pass**: Every generated test passes
--  **Behavior Coverage**: All Gherkin scenarios are tested
--  **Schema Validation**: All shared and internal schemas validated
--  **Interface Contracts**: All service interfaces working correctly
--  **Domain Logic**: All business rules implemented correctly
--  **Code Quality**: Passes linting, type checking, and formatting
+- **[All Tests Pass]**: Every generated test passes
+- **[Behavior Coverage]**: All Gherkin scenarios are tested
+- **[Schema Validation]**: All shared and internal schemas validated
+- **[Interface Contracts]**: All service interfaces working correctly
+- **[Domain Logic]**: All business rules implemented correctly
+- **[Code Quality]**: Passes linting, type checking, and formatting
 
 ### Quality Gates:
--  **Test Coverage**: Minimum 90% for critical paths
--  **Schema Compliance**: All data validated at boundaries
--  **Interface Consistency**: All service contracts honored
--  **Documentation**: All code and schemas properly documented
+- **[Test Coverage]**: Minimum 90% for critical paths
+- **[Schema Compliance]**: All data validated at boundaries
+- **[Interface Consistency]**: All service contracts honored
+- **[Documentation]**: All code and schemas properly documented
 
-## =à Development Tools Integration
+## [Development Tools Integration]
 
 ### Environment Setup
 ```bash
