@@ -298,11 +298,62 @@ setup-formal-tools-local:
     fi
 
     echo ""
-    echo "🎉 Local installation completed!"
-    echo "Java: $(tools/lib/jdk-17/bin/java -version 2>&1 | head -1 2>/dev/null || echo 'Use system Java')"
-    echo "Alloy: $([ -f "tools/bin/alloy" ] && echo './tools/bin/alloy (built from source)' || echo 'Use system or install manually')"
+    echo "📦 Installing TLA+ Toolbox..."
+    cd "$DOWNLOAD_DIR"
+
+    # Download TLA+ Toolbox (includes TLA+ tools and TLC model checker)
+    if [ ! -f "tla2tools.jar" ]; then
+        echo "Downloading TLA+ Toolbox..."
+        # Use the latest stable TLA+ tools release
+        curl -L -o tla2tools.jar "https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar"
+    fi
+
+    # Create TLA+ executable script using echo commands
+    mkdir -p "$PROJECT_ROOT/tools/bin"
+    echo '#!/bin/bash' > "$PROJECT_ROOT/tools/bin/tlc"
+    echo '# Get the directory where this script is located' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '# Use local Java if available, otherwise system Java' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'if [ -f "$PROJECT_ROOT/lib/jdk-17/bin/java" ]; then' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '    JAVA_CMD="$PROJECT_ROOT/lib/jdk-17/bin/java"' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'else' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '    JAVA_CMD="java"' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'fi' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo '# Run TLA+ model checker' >> "$PROJECT_ROOT/tools/bin/tlc"
+    echo 'exec "$JAVA_CMD" -cp "$SCRIPT_DIR/../lib/tla2tools.jar" tlc2.TLC "$@"' >> "$PROJECT_ROOT/tools/bin/tlc"
+
+    # Make TLA+ scripts executable
+    chmod +x "$PROJECT_ROOT/tools/bin/tlc"
+
+    # Copy TLA+ tools jar to lib directory
+    mkdir -p "$PROJECT_ROOT/tools/lib"
+    cp "$DOWNLOAD_DIR/tla2tools.jar" "$PROJECT_ROOT/tools/lib/"
+
+    # Return to project root
+    cd "$PROJECT_ROOT"
+
     echo ""
-    echo "Run: just alloy-verify"
+    echo "🎉 Local installation completed!"
+    if [ -f "tools/lib/jdk-17/bin/java" ]; then
+        echo "Java: $(tools/lib/jdk-17/bin/java -version 2>&1 | head -1)"
+    else
+        echo "Java: Use system Java"
+    fi
+    if [ -f "tools/bin/alloy" ]; then
+        echo "Alloy: ./tools/bin/alloy (built from source)"
+    else
+        echo "Alloy: Use system or install manually"
+    fi
+    if [ -f "tools/bin/tlc" ]; then
+        echo "TLA+: ./tools/bin/tlc (v1.8.0)"
+    else
+        echo "TLA+: Use system or install manually"
+    fi
+    echo ""
+    echo "Run: just alloy-verify or just tla-verify"
 
 alloy-verify:
     #!/usr/bin/env sh
@@ -345,6 +396,43 @@ alloy-verify:
     echo "Key findings:"
     if [ -f "docs/architecture/v0.0/alloy/verification-results.txt" ]; then
         grep -E "(assert|check|found|no counterexample|counterexample)" docs/architecture/v0.0/alloy/verification-results.txt | head -10 || echo "Analysis complete - check full results"
+    fi
+
+tla-verify:
+    #!/usr/bin/env sh
+    echo "=== Running TLA+ temporal verification ==="
+
+    # Get the justfile directory (project root)
+    PROJECT_ROOT="$(dirname "$(readlink -f "${JUSTFILE:-justfile}")")"
+    cd "$PROJECT_ROOT" || exit 1
+
+    if [ -f "tools/bin/tlc" ]; then
+        TLC_CMD="./tools/bin/tlc"
+    elif command -v tlc >/dev/null 2>&1; then
+        TLC_CMD="tlc"
+    else
+        echo "❌ TLA+ TLC not found. Please run: just setup-formal-tools"
+        exit 1
+    fi
+
+    echo "🔍 Using TLA+ TLC: $TLC_CMD"
+    echo "📁 Analyzing model: docs/architecture/v0.0/tla/client-factory.tla"
+    echo ""
+
+    # Create output directory
+    mkdir -p docs/architecture/v0.0/tla/results
+
+    # Run TLA+ model checking
+    echo "Running temporal logic verification..."
+    $TLC_CMD -workers auto -depth 100 -config docs/architecture/v0.0/tla/client-factory.cfg docs/architecture/v0.0/tla/client-factory.tla > docs/architecture/v0.0/tla/verification-results.txt 2>&1
+
+    echo ""
+    echo "✅ TLA+ analysis completed!"
+    echo "📄 Results saved to: docs/architecture/v0.0/tla/verification-results.txt"
+    echo ""
+    echo "Key findings:"
+    if [ -f "docs/architecture/v0.0/tla/verification-results.txt" ]; then
+        grep -E "(Error|Exception|counterexample|Model checking completed)" docs/architecture/v0.0/tla/verification-results.txt | head -10 || echo "Analysis complete - check full results"
     fi
 
 # Teja Pattern workflow commands

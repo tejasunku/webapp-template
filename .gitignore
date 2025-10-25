@@ -145,3 +145,7 @@ dist
 
 # Formal verification tools (local installation)
 tools/
+
+#TLA stuff
+states/
+*.bin
