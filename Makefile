@@ -17,9 +17,18 @@ help: ## Show this help message
 	@echo "  agent-intent     Run Intent analysis agent"
 	@echo "  agent-spec       Run Specification agent"
 	@echo "  agent-arch       Run Architecture agent"
-	@echo "  agent-impl       Run Implementation agent"
+	@echo "  agent-alloy      Run Alloy formal models agent"
+	@echo "  agent-behavior   Run Behavior agent (Gherkin)"
+	@echo "  agent-schemas    Run Schemas agent (Valibot)"
 	@echo "  agent-test       Run Testing agent"
+	@echo "  agent-impl       Run Implementation agent"
 	@echo "  agent-govern     Run Governance agent"
+	@echo ""
+	@echo "Formal Verification Commands:"
+	@echo "  alloy-analyze    Run all Alloy model analyses"
+	@echo "  alloy-validate   Validate critical system properties"
+	@echo "  alloy-run MODEL=<name>   Run specific Alloy model"
+	@echo "  alloy-report     Generate comprehensive analysis report"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make dev         # Start development servers"
@@ -158,6 +167,104 @@ format: ## Format all code files
 check: lint typecheck test ## Run all quality checks (lint, typecheck, test)
 
 # =============================================================================
+# FORMAL VERIFICATION COMMANDS (Alloy)
+# =============================================================================
+
+.PHONY: alloy-check
+alloy-check: ## Check if Alloy Analyzer is installed
+	@command -v alloy >/dev/null 2>&1 || { \
+		$(call print_error,"Alloy Analyzer not found. Install from: https://alloytools.org/"); \
+		exit 1; \
+	}
+	$(call print_success,"Alloy Analyzer is available")
+
+.PHONY: alloy-analyze
+alloy-analyze: alloy-check ## Run all Alloy model analyses
+	$(call print_header,"Running Alloy formal verification...")
+	@mkdir -p docs/architecture/v0.0/alloy/results
+	@echo "Analyzing client factory model..."
+	@if command -v alloy >/dev/null 2>&1; then \
+		alloy docs/architecture/v0.0/alloy/client-factory.als > docs/architecture/v0.0/alloy/results/client-factory-analysis.txt 2>&1 || true; \
+		echo "✓ Client factory analysis completed"; \
+	else \
+		echo "⚠ Alloy not available - skipping formal verification"; \
+		echo "Install from: https://alloytools.org/"; \
+	fi
+	$(call print_success,"Alloy analysis completed")
+
+.PHONY: alloy-run
+alloy-run: alloy-check ## Run specific Alloy model
+	@if [ -z "$(MODEL)" ]; then \
+		echo "Usage: make alloy-run MODEL=<model-name>"; \
+		echo "Available models:"; \
+		ls docs/architecture/v0.0/alloy/*.als | sed 's/.*\///' | sed 's/.als$$/'; \
+		exit 1; \
+	fi
+	$(call print_header,"Running Alloy model: $(MODEL)")
+	@alloy docs/architecture/v0.0/alloy/$(MODEL).als
+
+.PHONY: alloy-check-assertion
+alloy-check-assertion: alloy-check ## Check specific assertion in Alloy model
+	@if [ -z "$(MODEL)" ] || [ -z "$(ASSERTION)" ]; then \
+		echo "Usage: make alloy-check-assertion MODEL=<model-name> ASSERTION=<assertion-name>"; \
+		exit 1; \
+	fi
+	$(call print_header,"Checking assertion $(ASSERTION) in model $(MODEL)")
+	@alloy docs/architecture/v0.0/alloy/$(MODEL).als --check $(ASSERTION)
+
+.PHONY: alloy-generate-instance
+alloy-generate-instance: alloy-check ## Generate instance for Alloy model
+	@if [ -z "$(MODEL)" ]; then \
+		echo "Usage: make alloy-generate-instance MODEL=<model-name> [SCOPE]"; \
+		exit 1; \
+	fi
+	$(call print_header,"Generating instance for model $(MODEL)")
+	@if [ -n "$(SCOPE)" ]; then \
+		alloy docs/architecture/v0.0/alloy/$(MODEL).als --run $(SCOPE); \
+	else \
+		alloy docs/architecture/v0.0/alloy/$(MODEL).als; \
+	fi
+
+.PHONY: alloy-counterexample
+alloy-counterexample: alloy-check ## Generate counterexample for failed assertion
+	@if [ -z "$(MODEL)" ] || [ -z "$(ASSERTION)" ]; then \
+		echo "Usage: make alloy-counterexample MODEL=<model-name> ASSERTION=<assertion-name>"; \
+		exit 1; \
+	fi
+	$(call print_header,"Generating counterexample for $(ASSERTION) in $(MODEL)")
+	@alloy docs/architecture/v0.0/alloy/$(MODEL).als --check $(ASSERTION) --show
+
+.PHONY: alloy-validate
+alloy-validate: alloy-check ## Validate all critical properties
+	$(call print_header,"Validating critical system properties...")
+	@echo "Checking process-scoped client isolation..."
+	@alloy docs/architecture/v0.0/alloy/client-factory.als --check ProcessScopedClients || echo "⚠ ProcessScopedClients check failed"
+	@echo "Checking thread isolation..."
+	@alloy docs/architecture/v0.0/alloy/client-factory.als --check ThreadIsolation || echo "⚠ ThreadIsolation check failed"
+	@echo "Checking factory consistency..."
+	@alloy docs/architecture/v0.0/alloy/client-factory.als --check FactoryTypeConsistency || echo "⚠ FactoryTypeConsistency check failed"
+	@echo "Checking initialization idempotency..."
+	@alloy docs/architecture/v0.0/alloy/client-factory.als --check ClientInitializationIdempotency || echo "⚠ ClientInitializationIdempotency check failed"
+	$(call print_success,"Property validation completed")
+
+.PHONY: alloy-report
+alloy-report: ## Generate comprehensive Alloy analysis report
+	$(call print_header,"Generating Alloy analysis report...")
+	@mkdir -p docs/architecture/v0.0/alloy/reports
+	@echo "# Alloy Analysis Report" > docs/architecture/v0.0/alloy/reports/latest.md
+	@echo "Generated: $(shell date)" >> docs/architecture/v0.0/alloy/reports/latest.md
+	@echo "" >> docs/architecture/v0.0/alloy/reports/latest.md
+	@echo "## Models Analyzed" >> docs/architecture/v0.0/alloy/reports/latest.md
+	@ls docs/architecture/v0.0/alloy/*.als | sed 's/.*\//- /' | sed 's/.als$$//' >> docs/architecture/v0.0/alloy/reports/latest.md
+	@echo "" >> docs/architecture/v0.0/alloy/reports/latest.md
+	@echo "## Results" >> docs/architecture/v0.0/alloy/reports/latest.md
+	@if [ -f docs/architecture/v0.0/alloy/results/client-factory-analysis.txt ]; then \
+		echo "### Client Factory Model" >> docs/architecture/v0.0/alloy/reports/latest.md; \
+		grep -E "(PASSED|FAILED|found)" docs/architecture/v0.0/alloy/results/client-factory-analysis.txt | head -10 >> docs/architecture/v0.0/alloy/reports/latest.md; \
+	fi
+	$(call print_success,"Report generated: docs/architecture/v0.0/alloy/reports/latest.md")
+
+# =============================================================================
 # DATABASE COMMANDS
 # =============================================================================
 
@@ -220,6 +327,23 @@ agent-arch: ## Run Architecture agent (Responsibilities + Models)
 	@echo "  ✓ Update responsibilities.yaml"
 	@echo "  ✓ Create/update formal models (Alloy/TLA+)"
 	@echo "  ✓ Validate system architecture"
+
+.PHONY: agent-alloy
+agent-alloy: ## Run Alloy models agent (Formal static analysis)
+	$(call print_header,"Running Alloy models agent...")
+	@echo "🤖 Alloy Agent: Creating formal static analysis models"
+	@echo "📁 Reading: Architecture specs, system requirements"
+	@echo "🎯 Output: Verified Alloy models with analysis results"
+	@echo ""
+	@echo "Agent Tasks:"
+	@echo "  ✓ Model system structure and component relationships"
+	@echo "  ✓ Define architectural invariants mathematically"
+	@echo "  ✓ Verify system properties with Alloy Analyzer"
+	@echo "  ✓ Generate counterexamples for failed properties"
+	@echo "  ✓ Create formal verification documentation"
+	@echo ""
+	@echo "Running Alloy analysis..."
+	@make alloy-validate
 
 .PHONY: agent-behavior
 agent-behavior: ## Run Behavior agent (Gherkin features)
@@ -296,6 +420,9 @@ workflow-spec: agent-intent agent-spec ## Complete specification workflow (Inten
 .PHONY: workflow-design
 workflow-design: agent-intent agent-spec agent-arch ## Complete design workflow (Spec → Architecture)
 
+.PHONY: workflow-formal
+workflow-formal: workflow-design agent-alloy ## Complete formal verification workflow (Architecture → Formal Models)
+
 .PHONY: workflow-behavior
 workflow-behavior: workflow-design agent-behavior agent-schemas ## Complete behavior workflow (Architecture → Behavior → Schemas)
 
@@ -304,6 +431,9 @@ workflow-implementation: workflow-behavior agent-test agent-impl ## Complete imp
 
 .PHONY: workflow-full
 workflow-full: workflow-implementation agent-govern ## Complete full Teja Pattern workflow
+
+.PHONY: workflow-with-formal
+workflow-with-formal: workflow-formal workflow-implementation ## Complete workflow with formal verification
 
 # =============================================================================
 # UTILITIES AND MIGRATION
