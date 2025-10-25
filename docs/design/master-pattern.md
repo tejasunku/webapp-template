@@ -162,6 +162,32 @@ They export *pure async functions* that wrap SDK calls.
 | **App**       | Branching orchestration.                                                            | Edge-condition tests                |
 | **Shared**    | Schema round-trip validation.                                                       | Serialization tests                 |
 
+### 6.2 Gherkin Documentation Requirements
+
+**All Gherkin features must include labels for traceability:**
+
+```gherkin
+@feature: Feature Name
+  @id: F-XXX
+  Feature description...
+
+  @scenario: SC-XXX
+  Scenario: Scenario description
+    Given ...
+    When ...
+    Then ...
+```
+
+**Required Labels:**
+- `@feature: Feature Name` - Feature identification
+- `@id: F-XXX` - Unique feature identifier
+- `@scenario: SC-XXX` - Unique scenario identifier for test mapping
+
+**Test Mapping:**
+- Tests must reference Gherkin scenario IDs in their descriptions
+- Each test should map 1:1 to a Gherkin scenario
+- Test files must include `@scenario: SC-XXX` labels in test descriptions
+
 > **If behavior is tested globally, you do not need a local SDK test.**
 > Local tests only exist for nontrivial logic that can't be observed through end-to-end integration.
 
@@ -233,11 +259,57 @@ version_policy:
 
 ## 9 · Milestone Workflow
 
-Each milestone represents a verified, stable state of the system.
+### 9.1 Milestone Philosophy
 
-* Snapshot models, schemas, and tests.
-* Increment milestone when feature set or contracts change.
-* Use `/docs/milestones/vX.yaml` to define version dependencies across libraries.
+**Small, frequent, implementable milestones** are the core of the Teja Pattern. Each milestone should be achievable within 1-2 days and provide immediate value.
+
+### 9.2 Milestone Characteristics
+
+**v0.0.0 - The "Hello World" Milestone**
+- Duration: ~1 day
+- Goal: Validate basic project setup and workflow
+- Example: Simple text input with submit button that saves to backend
+- Purpose: Prove the development loop works end-to-end
+
+**Incremental Milestones**
+- Duration: 1-2 days each
+- Goal: Add specific, testable functionality
+- Value: Each milestone delivers working features
+- Feedback: Implementation experience refines future milestones
+
+### 9.3 Milestone Requirements
+
+**Every milestone must:**
+1. **Be Implementable** - Can be completed within 1-2 days
+2. **Provide Value** - Delivers working, demonstrable functionality
+3. **Be Testable** - Has comprehensive test coverage
+4. **Be Documented** - Updated architecture and intent as needed
+5. **Be Deployable** - Can be deployed and used immediately
+
+### 9.4 Milestone Workflow
+
+1. **Define Milestone** - Create specific, achievable scope
+2. **Implement** - Build functionality using Teja Pattern
+3. **Test** - Ensure comprehensive coverage
+4. **Validate** - Confirm milestone meets requirements
+5. **Deploy** - Release working milestone
+6. **Refine** - Update intent and future milestones based on implementation experience
+
+### 9.5 Milestone Artifacts
+
+Each milestone generates:
+- Working code implementation
+- Comprehensive test suite
+- Updated documentation
+- Deployment artifacts
+- Lessons learned for next milestone
+
+### 9.6 Milestone Files
+
+- `/docs/milestones/vX.Y.Z.yaml` - Milestone definition and requirements
+- Implementation code in appropriate service directories
+- Test coverage for all new functionality
+- Updated architecture documentation
 
 ---
 

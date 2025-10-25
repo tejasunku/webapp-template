@@ -1,0 +1,34 @@
+{
+  "name": "queue-service",
+  "version": "0.1.0",
+  "description": "Redis queue service SDK and adapters",
+  "main": "dist/sdk/index.js",
+  "types": "dist/sdk/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/sdk/index.ts --outdir dist/sdk --target bun",
+    "dev": "bun --watch src/sdk/index.ts",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ioredis": "^5",
+    "valibot": "^0.30",
+    "@shared/utils": "workspace:*",
+    "@shared/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "bun-types": "^1",
+    "vitest": "^1"
+  },
+  "exports": {
+    "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
+      "import": "./dist/sdk/index.js"
+    }
+  },
+  "files": [
+    "dist/sdk"
+  ]
+}

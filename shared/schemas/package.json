@@ -1,0 +1,31 @@
+{
+  "name": "@shared/schemas",
+  "version": "0.1.0",
+  "description": "Shared Valibot schemas for data validation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "valibot": "^0.30"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

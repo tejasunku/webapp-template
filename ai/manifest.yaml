@@ -1,0 +1,212 @@
+# AI Manifest - Teja Pattern Governance
+# Development policies and automation rules for the monorepo
+
+manifest:
+  version: "1.0"
+  pattern: "Teja Pattern v1.0"
+  last_updated: "2024-10-24"
+
+# SDK and External Service Policies
+sdk_policy:
+  rules:
+    - "All adapters must use makeScopedClient() from shared/utils/clientFactory.ts"
+    - "No SDK initialized at import time - use lazy initialization"
+    - "Clients must reinitialize when PID/thread changes"
+    - "All client methods must be async - use makeAsyncClient() wrapper"
+    - "Adapters export pure async functions, not client instances"
+    - "Each service SDK lives in its own service/sdk/ directory"
+    - "SDKs must be independently installable and consumable"
+
+  forbidden_patterns:
+    - "Top-level SDK initialization"
+    - "Global client instances"
+    - "Synchronous external service calls"
+    - "Direct database connections without adapters"
+
+# Testing Policies
+test_policy:
+  rules:
+    - "Global integration tests for each Gherkin feature"
+    - "Domain tests only for business logic invariants"
+    - "SDK tests only for nontrivial transformations or retry logic"
+    - "App tests for orchestration and edge conditions"
+    - "All external service calls mocked in unit tests"
+    - "Tests must use Vitest for unit tests, Playwright for E2E"
+    - "Minimum 90% code coverage for critical paths"
+
+  coverage_requirements:
+    domain: "95%"
+    sdk: "80%"
+    app: "85%"
+    integration: "All critical user journeys"
+
+# Documentation Policies
+doc_policy:
+  rules:
+    - "Single canonical /docs/design/master-pattern.md per monorepo"
+    - "Local READMEs reference the canonical design doc"
+    - "All external services documented in /docs/architecture/vX.Y/resources.md"
+    - "Tech stack changes must update /docs/tech_stack.md"
+    - "API changes must update OpenAPI specifications"
+    - "Architecture decisions must be recorded as ADRs"
+
+  required_files:
+    - "README.md in every service directory"
+    - "Intent documentation in /docs/intent.md"
+    - "Resources configuration in /docs/architecture/vX.Y/resources.md"
+
+# Version Policies
+version_policy:
+  rules:
+    - "Patch = bug fix + regression tests"
+    - "Minor = new feature + feature tests"
+    - "Major = breaking change + updated Gherkin + schema + tests"
+    - "Each service versions independently"
+    - "Monorepo milestone tracks global coherence"
+    - "Use semantic versioning for all published packages"
+
+  version_triggers:
+    patch: ["bug_fixes", "stability_improvements", "security_patches"]
+    minor: ["new_features", "non_breaking_changes", "performance_improvements"]
+    major: ["breaking_changes", "api_redesign", "architecture_changes"]
+
+# Code Quality Policies
+code_quality:
+  rules:
+    - "TypeScript strict mode enabled"
+    - "All data crossing boundaries validated with Valibot schemas"
+    - "No implicit any types allowed"
+    - "Use Bun runtime for backend services"
+    - "Use pnpm for package management"
+    - "ESLint + Prettier for code formatting"
+    - "Pre-commit hooks required for all changes"
+
+  forbidden_patterns:
+    - "Redux - use TanStack Query for server state"
+    - "Axios - use native fetch"
+    - "Class components - React function components only"
+    - "Implicit any or unchecked JSON"
+    - "Hardcoded secrets or configuration"
+
+# Security Policies
+security_policy:
+  rules:
+    - "All secrets through environment variables only"
+    - "Environment variables validated at startup with Valibot"
+    - "PII data redacted from logs and telemetry"
+    - "Input validation on all API endpoints"
+    - "HTTPS required for all external communications"
+    - "Security scanning in CI pipeline"
+
+  required_validations:
+    - "Environment variable schema validation"
+    - "API request/response validation"
+    - "SQL injection protection via Drizzle ORM"
+    - "XSS protection in frontend"
+
+# Performance Policies
+performance_policy:
+  rules:
+    - "Bundle analysis for frontend builds"
+    - "Database query optimization with Drizzle"
+    - "Redis caching for expensive operations"
+    - "Monitoring for all service endpoints"
+    - "Load testing for critical paths"
+
+  targets:
+    - "First Contentful Paint < 1.5s"
+    - "API response time < 200ms (95th percentile)"
+    - "Database query time < 100ms (average)"
+    - "Cache hit rate > 80%"
+
+# Observability Policies
+observability_policy:
+  rules:
+    - "All services emit structured logs"
+    - "Critical operations include correlation IDs"
+    - "Metrics collected for all service endpoints"
+    - "Distributed tracing for cross-service calls"
+    - "Error tracking with stack traces"
+
+  tools:
+    logging: "Grafana Loki"
+    metrics: "Grafana Prometheus"
+    tracing: "Grafana Tempo"
+    collector: "Grafana Alloy"
+
+# Development Workflow Policies
+workflow_policy:
+  rules:
+    - "All work done via feature branches from develop"
+    - "Pull reviews required for all changes"
+    - "Automated tests must pass before merge"
+    - "Documentation updated with code changes"
+    - "Version bumped according to change type"
+
+  branch_protection:
+    - "main: protected, require PR + tests + review"
+    - "develop: protected, require PR + tests"
+
+# AI Development Assistance
+ai_assistance:
+  enabled: true
+  tools:
+    - "Claude Code for development assistance"
+    - "AI-powered code reviews"
+    - "Automated documentation generation"
+
+  policies:
+    - "AI-generated code must be reviewed by human"
+    - "AI assistance follows Teja Pattern methodology"
+    - "No sensitive data sent to AI services"
+
+# Technology Stack Governance
+tech_stack:
+  backend:
+    runtime: "Bun >= 1.1"
+    framework: "ElysiaJS >= 1.0"
+    database: "PostgreSQL + Drizzle ORM v0.30+"
+    validation: "Valibot"
+
+  frontend:
+    framework: "React 18 + TypeScript"
+    bundler: "Vite >= 5"
+    routing: "TanStack Router v1"
+    state: "TanStack Query v4 + Zustand"
+    styling: "Tailwind CSS"
+
+  infrastructure:
+    hosting: "Render + Supabase"
+    package_manager: "pnpm with workspaces"
+    observability: "Grafana Cloud Stack"
+
+# Milestone Tracking
+milestone_policy:
+  rules:
+    - "Each milestone represents verified, stable state"
+    - "Milestones tracked in /docs/milestones/vX.yaml"
+    - "Architecture snapshots included in milestones"
+    - "Breaking changes require milestone increment"
+    - "All tests must pass for milestone release"
+
+# Compliance and Legal
+compliance:
+  rules:
+    - "GDPR compliance for user data handling"
+    - "Open source license compliance"
+    - "No third-party dependencies with restrictive licenses"
+    - "Data retention policies enforced"
+
+# Automation Rules
+automation:
+  ci_cd:
+    - "Automated builds on GitHub Actions"
+    - "Test suite execution on all PRs"
+    - "Security scanning in pipeline"
+    - "Automated dependency updates"
+
+  code_quality:
+    - "Pre-commit hooks for linting/formatting"
+    - "Automated code coverage reporting"
+    - "Dependency vulnerability scanning"
+    - "Bundle size analysis"

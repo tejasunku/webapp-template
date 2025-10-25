@@ -1,0 +1,57 @@
+{
+  "name": "webapp-template",
+  "version": "0.1.0",
+  "description": "Web app monorepo template using the Teja Pattern",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "build": "pnpm run --recursive build",
+    "test": "pnpm run --recursive test",
+    "test:e2e": "playwright test",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "clean": "pnpm run --recursive clean",
+    "db:migrate": "pnpm run --filter=db-sdk db:migrate",
+    "db:generate": "pnpm run --filter=db-sdk db:generate",
+    "db:studio": "pnpm run --filter=db-sdk db:studio"
+  },
+  "workspaces": [
+    "apps/backend/*",
+    "apps/frontend/*",
+    "shared/*"
+  ],
+  "devDependencies": {
+    "@types/node": "^20",
+    "@typescript-eslint/eslint-plugin": "^6",
+    "@typescript-eslint/parser": "^6",
+    "eslint": "^8",
+    "eslint-config-prettier": "^9",
+    "prettier": "^3",
+    "typescript": "^5",
+    "vitest": "^1",
+    "playwright": "^1"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=8"
+  },
+  "packageManager": "pnpm@8",
+  "keywords": [
+    "monorepo",
+    "typescript",
+    "elysiajs",
+    "react",
+    "bun",
+    "drizzle",
+    "teja-pattern"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/webapp-template.git"
+  }
+}
