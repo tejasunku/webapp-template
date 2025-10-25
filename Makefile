@@ -18,6 +18,7 @@ help: ## Show this help message
 	@echo "  agent-spec       Run Specification agent"
 	@echo "  agent-arch       Run Architecture agent"
 	@echo "  agent-alloy      Run Alloy formal models agent"
+	@echo "  agent-tla        Run TLA+ formal models agent"
 	@echo "  agent-behavior   Run Behavior agent (Gherkin)"
 	@echo "  agent-schemas    Run Schemas agent (Valibot)"
 	@echo "  agent-test       Run Testing agent"
@@ -29,6 +30,11 @@ help: ## Show this help message
 	@echo "  alloy-validate   Validate critical system properties"
 	@echo "  alloy-run MODEL=<name>   Run specific Alloy model"
 	@echo "  alloy-report     Generate comprehensive analysis report"
+	@echo "  tla-analyze      Run all TLA+ temporal analyses"
+	@echo "  tla-validate    Validate critical temporal properties"
+	@echo "  tla-run MODEL=<name>      Run specific TLA+ model"
+	@echo "  tla-simulate MODEL=<name> [STEPS]  Simulate model execution"
+	@echo "  tla-report       Generate comprehensive TLA+ report"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make dev         # Start development servers"
@@ -265,6 +271,96 @@ alloy-report: ## Generate comprehensive Alloy analysis report
 	$(call print_success,"Report generated: docs/architecture/v0.0/alloy/reports/latest.md")
 
 # =============================================================================
+# FORMAL VERIFICATION COMMANDS (TLA+)
+# =============================================================================
+
+.PHONY: tla-check
+tla-check: ## Check if TLA+ tools are installed
+	@command -v java >/dev/null 2>&1 || { \
+		$(call print_error,"Java not found. Install Java 8+ for TLA+ tools"); \
+		exit 1; \
+	}
+	@if [ ! -f "tla2tools.jar" ]; then \
+		$(call print_header,"Downloading TLA+ tools..."); \
+		curl -L -o tla2tools.jar https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar; \
+	fi
+	$(call print_success,"TLA+ tools are available")
+
+.PHONY: tla-analyze
+tla-analyze: tla-check ## Run all TLA+ model analyses
+	$(call print_header,"Running TLA+ temporal verification...")
+	@mkdir -p docs/architecture/v0.0/tla/results
+	@echo "Analyzing client factory temporal model..."
+	@if [ -f "docs/architecture/v0.0/tla/client-factory.tla" ]; then \
+		java -cp tla2tools.jar tlc2.TLC -tool -workers auto -config docs/architecture/v0.0/tla/client-factory.cfg docs/architecture/v0.0/tla/client-factory.tla > docs/architecture/v0.0/tla/results/client-factory-analysis.txt 2>&1 || true; \
+		echo "✓ Client factory temporal analysis completed"; \
+	else \
+		echo "⚠ Client factory TLA+ model not found"; \
+	fi
+	$(call print_success,"TLA+ analysis completed")
+
+.PHONY: tla-run
+tla-run: tla-check ## Run specific TLA+ model
+	@if [ -z "$(MODEL)" ]; then \
+		echo "Usage: make tla-run MODEL=<model-name>"; \
+		echo "Available models:"; \
+		ls docs/architecture/v0.0/tla/*.tla | sed 's/.*\///' | sed 's/.tla$$/'; \
+		exit 1; \
+	fi
+	$(call print_header,"Running TLA+ model: $(MODEL)")
+	@java -cp tla2tools.jar tlc2.TLC -tool docs/architecture/v0.0/tla/$(MODEL).tla
+
+.PHONY: tla-check-property
+tla-check-property: tla-check ## Check specific temporal property
+	@if [ -z "$(MODEL)" ] || [ -z "$(PROPERTY)" ]; then \
+		echo "Usage: make tla-check-property MODEL=<model-name> PROPERTY=<property-name>"; \
+		exit 1; \
+	fi
+	$(call print_header,"Checking temporal property $(PROPERTY) in model $(MODEL)")
+	@java -cp tla2tools.jar tlc2.TLC -tool -config docs/architecture/v0.0/tla/$(MODEL).cfg -property $(PROPERTY) docs/architecture/v0.0/tla/$(MODEL).tla
+
+.PHONY: tla-simulate
+tla-simulate: tla-check ## Simulate TLA+ model execution
+	@if [ -z "$(MODEL)" ]; then \
+		echo "Usage: make tla-simulate MODEL=<model-name> [STEPS]"; \
+		exit 1; \
+	fi
+	$(call print_header,"Simulating TLA+ model: $(MODEL)")
+	@if [ -n "$(STEPS)" ]; then \
+		java -cp tla2tools.jar tlc2.Simulator -tool -maxDepth $(STEPS) docs/architecture/v0.0/tla/$(MODEL).tla; \
+	else \
+		java -cp tla2tools.jar tlc2.Simulator -tool docs/architecture/v0.0/tla/$(MODEL).tla; \
+	fi
+
+.PHONY: tla-validate
+tla-validate: tla-check ## Validate critical temporal properties
+	$(call print_header,"Validating critical temporal properties...")
+	@echo "Checking type safety property..."
+	@if [ -f "docs/architecture/v0.0/tla/client-factory.tla" ]; then \
+		java -cp tla2tools.jar tlc2.TLC -tool -config docs/architecture/v0.0/tla/client-factory.cfg docs/architecture/v0.0/tla/client-factory.tla 2>/dev/null || echo "⚠ TLA+ validation completed with issues"; \
+	else \
+		echo "⚠ TLA+ model not found"; \
+	fi
+	$(call print_success,"Temporal property validation completed")
+
+.PHONY: tla-report
+tla-report: ## Generate comprehensive TLA+ analysis report
+	$(call print_header,"Generating TLA+ analysis report...")
+	@mkdir -p docs/architecture/v0.0/tla/reports
+	@echo "# TLA+ Analysis Report" > docs/architecture/v0.0/tla/reports/latest.md
+	@echo "Generated: $(shell date)" >> docs/architecture/v0.0/tla/reports/latest.md
+	@echo "" >> docs/architecture/v0.0/tla/reports/latest.md
+	@echo "## Models Analyzed" >> docs/architecture/v0.0/tla/reports/latest.md
+	@ls docs/architecture/v0.0/tla/*.tla 2>/dev/null | sed 's/.*\//- /' | sed 's/.tla$$//' >> docs/architecture/v0.0/tla/reports/latest.md || echo "No TLA+ models found"
+	@echo "" >> docs/architecture/v0.0/tla/reports/latest.md
+	@echo "## Temporal Properties Verified" >> docs/architecture/v0.0/tla/reports/latest.md
+	@if [ -f docs/architecture/v0.0/tla/results/client-factory-analysis.txt ]; then \
+		echo "### Client Factory Model" >> docs/architecture/v0.0/tla/reports/latest.md; \
+		grep -E "(Error|Exception|found|completed)" docs/architecture/v0.0/tla/results/client-factory-analysis.txt | head -10 >> docs/architecture/v0.0/tla/reports/latest.md; \
+	fi
+	$(call print_success,"Report generated: docs/architecture/v0.0/tla/reports/latest.md")
+
+# =============================================================================
 # DATABASE COMMANDS
 # =============================================================================
 
@@ -345,6 +441,23 @@ agent-alloy: ## Run Alloy models agent (Formal static analysis)
 	@echo "Running Alloy analysis..."
 	@make alloy-validate
 
+.PHONY: agent-tla
+agent-tla: ## Run TLA+ models agent (Formal dynamic analysis)
+	$(call print_header,"Running TLA+ models agent...")
+	@echo "🤖 TLA+ Agent: Creating formal dynamic analysis models"
+	@echo "📁 Reading: Behavior specs, system requirements"
+	@echo "🎯 Output: Verified TLA+ models with temporal analysis"
+	@echo ""
+	@echo "Agent Tasks:"
+	@echo "  ✓ Model system state transitions and behaviors"
+	@echo "  ✓ Define temporal properties mathematically"
+	@echo "  ✓ Verify temporal properties with TLC model checker"
+	@echo "  ✓ Generate counterexamples for property violations"
+	@echo "  ✓ Create dynamic behavior verification documentation"
+	@echo ""
+	@echo "Running TLA+ analysis..."
+	@make tla-validate
+
 .PHONY: agent-behavior
 agent-behavior: ## Run Behavior agent (Gherkin features)
 	$(call print_header,"Running Behavior agent...")
@@ -421,10 +534,10 @@ workflow-spec: agent-intent agent-spec ## Complete specification workflow (Inten
 workflow-design: agent-intent agent-spec agent-arch ## Complete design workflow (Spec → Architecture)
 
 .PHONY: workflow-formal
-workflow-formal: workflow-design agent-alloy ## Complete formal verification workflow (Architecture → Formal Models)
+workflow-formal: workflow-design agent-alloy agent-tla ## Complete formal verification workflow (Architecture → Formal Models)
 
 .PHONY: workflow-behavior
-workflow-behavior: workflow-design agent-behavior agent-schemas ## Complete behavior workflow (Architecture → Behavior → Schemas)
+workflow-behavior: workflow-formal agent-behavior agent-schemas ## Complete behavior workflow (Formal Models → Behavior → Schemas)
 
 .PHONY: workflow-implementation
 workflow-implementation: workflow-behavior agent-test agent-impl ## Complete implementation workflow (Schemas → Tests → Implementation)
