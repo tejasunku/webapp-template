@@ -6,7 +6,7 @@
 
 ## Agent Purpose
 
-Creates and validates formal Alloy models to ensure static correctness of system architecture, data structures, and invariants. Provides mathematical guarantees about system properties before implementation.
+**Conditional formal verification agent** that creates and validates Alloy models only when specific concerns exist. Used for schema/interface/data stability problems, data consistency concerns, complex structural relationships, or resource sharing validation. Skipped for simple, well-understood behaviors.
 
 ## Core Responsibilities
 
@@ -136,37 +136,53 @@ assert ServiceIsolation {
 run ServiceIsolation for 3 but 5 Component
 ```
 
-## Agent Workflow
+## Agent Workflow (Conditional)
 
-### Step 1: Analyze Architecture Specifications
+### Step 0: Decision Check - Should Alloy Be Used?
+**Use Alloy only if ANY of these concerns exist:**
+- Schema/interface/data stability problems
+- Data consistency and safety concerns
+- Complex structural relationships
+- Resource sharing and isolation validation
+- Type safety between service boundaries
+
+**If NO concerns exist, skip formal verification and proceed directly to Gherkin.**
+
+### Step 1: Analyze Specific Concerns (Conditional)
 - Read `/docs/architecture/vX.Y/responsibilities.yaml`
-- Examine service boundaries and interactions
-- Identify key invariants and constraints
-- Map component relationships
+- Identify the specific concern driving formal verification need
+- Map the problem to appropriate Alloy modeling approach
+- Determine what properties need verification
 
-### Step 2: Define Abstract Model
-- Create component signatures
-- Define relationships and constraints
-- Specify system invariants mathematically
-- Model data flow patterns
+### Step 2: Define Targeted Model (Conditional)
+- Create focused model for the specific concern
+- Define relationships and constraints relevant to the concern
+- Specify system invariants mathematically for the problem area
+- Model only the necessary structure for verification
 
-### Step 3: Specify Properties
-- Define properties to verify
-- Specify safety properties (nothing bad happens)
-- Specify liveness properties (something good eventually happens)
-- Define consistency properties
+### Step 3: Specify Relevant Properties (Conditional)
+- Define properties directly related to the identified concern
+- Specify safety properties for the specific problem
+- Define consistency properties for the data/structure in question
+- Focus on edge cases that motivated the formal model
 
-### Step 4: Run Analysis
-- Execute Alloy Analyzer
-- Check property satisfaction
-- Generate counterexamples for failures
-- Validate model consistency
+### Step 4: Run Analysis (Conditional)
+- Execute Alloy Analyzer on the targeted model
+- Check property satisfaction for the specific concerns
+- Generate counterexamples for failures related to the concern
+- Validate model consistency for the problem domain
 
-### Step 5: Generate Reports
-- Create analysis results documentation
-- Document found invariants and violations
+### Step 5: Update Milestone with Findings (Conditional)
+- Document discovered edge cases and constraints
+- Update milestone specifications with new requirements
+- Assess whether discovered constraints are acceptable
+- Provide clear recommendation: proceed or refine design
+
+### Step 6: Generate Report (Conditional)
+- Create analysis results focused on the specific concern
+- Document findings relevant to the problem area
 - Provide concrete examples and counterexamples
-- Generate validation certificates
+- Generate clear recommendations for proceeding to Gherkin
 
 ## Specific Models for This Project
 
@@ -346,13 +362,26 @@ make alloy-counterexample MODEL=service-architecture ASSERTION=NoCrossLayerViola
 3. [Additional properties to verify]
 ```
 
-## Integration with Teja Pattern
+## Integration with Simplified Teja Pattern
 
-1. **Specification Input** - Uses architecture specifications from earlier phase
-2. **Behavior Output** - Provides verified models for behavior specifications
-3. **Schema Influence** - Validates schema designs and relationships
-4. **Testing Guidance** - Identifies critical properties for testing
-5. **Documentation** - Completes formal verification documentation
+1. **Decision-Driven Activation** - Only activated when specific concerns exist (see formal-model-flow.md)
+2. **Targeted Analysis** - Focuses only on the specific problem area, not entire system
+3. **Milestone Integration** - Updates milestone specifications with discovered constraints
+4. **Direct to Gherkin** - Provides clear findings for behavior specification phase
+5. **Skip When Not Needed** - Most features proceed directly from Division of Responsibility → Gherkin
+
+## Success Criteria (Conditional)
+
+**When Alloy is used:**
+1. ✅ **Concern Resolution** - Specific concern that triggered analysis is addressed
+2. ✅ **Edge Case Documentation** - All discovered edge cases documented and assessed
+3. ✅ **Milestone Updates** - Milestone updated with new constraints if needed
+4. ✅ **Clear Path Forward** - Clear recommendation for proceeding to Gherkin
+
+**When Alloy is skipped:**
+1. ✅ **Decision Documented** - Reason for skipping formal verification is documented
+2. ✅ **Direct Progress** - Feature proceeds directly to Gherkin specification
+3. ✅ **Risk Assessment** - Absence of formal verification is assessed as acceptable
 
 ## Tooling Requirements
 

@@ -6,7 +6,7 @@
 
 ## Agent Purpose
 
-Creates and validates TLA+ models to ensure dynamic correctness of system behavior, state transitions, and temporal properties. Provides mathematical guarantees about system behavior over time and under concurrency.
+**Conditional formal verification agent** that creates and validates TLA+ models only when specific temporal concerns exist. Used for state machines with non-native transitions, performance guarantees, race conditions, or complex temporal behavior. **All TLA+ models must be backed by Alloy types**, even if boilerplate. Skipped for simple, natively supported behaviors.
 
 ## Core Responsibilities
 
@@ -224,37 +224,58 @@ PROPERTY
 ================================================================
 ```
 
-## Agent Workflow
+## Agent Workflow (Conditional)
 
-### Step 1: Analyze Dynamic Requirements
-- Read behavior specifications from Gherkin features
-- Examine state transition requirements
-- Identify temporal properties to verify
-- Map concurrency scenarios
+### Step 0: Decision Check - Should TLA+ Be Used?
+**Use TLA+ only if ANY of these concerns exist:**
+- State machines with non-native transitions (custom router edge cases, complex workflows)
+- Performance guarantees that must be mathematically proven
+- Race conditions and concurrency concerns
+- Complex temporal behavior that isn't natively supported
+- Multi-step processes with rollback requirements
 
-### Step 2: Define State Space
-- Specify system state variables
-- Define initial state conditions
-- Create state transition predicates
-- Ensure state space is finite and manageable
+**Skip TLA+ for:**
+- Native browser behavior (window resize, standard DOM events)
+- Simple request/response cycles
+- Standard database operations
+- Well-understood patterns
 
-### Step 3: Specify Temporal Properties
-- Define safety properties (nothing bad happens)
-- Specify liveness properties (something good eventually happens)
-- Add fairness constraints for realistic behavior
-- Ensure properties are verifiable
+**Prerequisite**: All TLA+ models must be backed by Alloy types (created by Alloy agent).
 
-### Step 4: Model Configuration
-- Set appropriate bounds for model checking
-- Configure symmetry reduction for efficiency
-- Define invariants for state validation
-- Optimize for TLC model checker
+### Step 1: Analyze Temporal Concerns (Conditional)
+- Read `/docs/architecture/vX.Y/responsibilities.yaml`
+- Identify the specific temporal concern driving TLA+ need
+- Map state machine complexity or concurrency issue
+- Determine performance guarantees that need proof
 
-### Step 5: Run Verification
-- Execute TLC model checker
-- Analyze counterexamples for property violations
-- Validate state space coverage
-- Generate verification reports
+### Step 2: Use Alloy Types from Alloy Agent (Required)
+- Use Alloy type definitions created by the Alloy agent
+- Ensure types cover all TLA+ state variables
+- Build upon existing structural foundation
+
+### Step 3: Define Targeted State Space (Conditional)
+- Specify system state variables relevant to the concern
+- Define initial state conditions for the problem area
+- Create focused state transition predicates
+- Ensure state space is finite and manageable for the specific concern
+
+### Step 4: Specify Relevant Temporal Properties (Conditional)
+- Define temporal properties directly related to the identified concern
+- Specify safety properties for the specific temporal problem
+- Define liveness properties relevant to the state machine
+- Add fairness constraints only if needed for the concern
+
+### Step 5: Run Verification (Conditional)
+- Execute TLC model checker on the targeted model
+- Analyze counterexamples for temporal property violations
+- Validate state space coverage for the concern area
+- Generate focused verification reports
+
+### Step 6: Update Milestone with Temporal Findings (Conditional)
+- Document discovered temporal constraints and race conditions
+- Update milestone specifications with temporal requirements
+- Assess whether discovered temporal constraints are acceptable
+- Provide clear recommendation: proceed or refine temporal design
 
 ## Specific Models for This Project
 

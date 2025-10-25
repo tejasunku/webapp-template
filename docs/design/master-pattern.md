@@ -22,13 +22,17 @@ No knowledge is implicit, no test is purposeless, and no code exists without pro
 ```
 Intent
  ↓
-Resources
+Milestone (Business Requirements)
  ↓
-Division of Responsibility
+Clarify existing Resources
  ↓
-Formal Models (Alloy / TLA⁺)
+Division of Responsibility (update Milestone with specifications learned here)
+ ↺ (Loop back if design changes needed)
  ↓
-Behavior (Gherkin)
+[Formal Models Decision - See /docs/design/formal-model-flow.md]
+ ↓
+Behavior (Gherkin) (Readable engineer implementation guide. Should always match milestones, but be less intent focused and cohesive. More comprehensive)
+ ↺ (Update Milestone if behavior reveals new requirements)
  ↓
 Schemas
  ↓
@@ -37,11 +41,61 @@ Tests
 Implementation (Domain / SDK / App / Tests)
  ↓
 Versioning & Governance
- ↺
+ ↺ (Loop back to refine any stage based on implementation experience)
 ```
+
+### Key Feedback Loops
+
+1. **Milestone ↔ Division of Responsibility**: Specifications learned during responsibility division update milestone requirements
+2. **Formal Models → Milestone**: Edge cases and constraints discovered update milestone specifications
+3. **Gherkin → Milestone**: Behavior specifications may reveal missing requirements
+4. **Implementation → Any Stage**: Implementation experience may require refining any previous stage
+
+**Formal Models Usage**: See `/docs/design/formal-model-flow.md` for detailed decision criteria on when to use Alloy and/or TLA+ models.
 
 Each stage produces structured outputs that the next consumes.
 Iteration happens through **milestones** — discrete, versioned snapshots of truth.
+
+---
+
+## 2.1 · Formal Model Integration
+
+### Decision-Driven Formal Verification
+
+Formal models are **conditional tools** used only when specific concerns exist:
+
+**Use Alloy for:**
+- Schema/interface/data stability problems
+- Data consistency and safety concerns
+- Complex structural relationships
+- Resource sharing and isolation validation
+
+**Use TLA+ for:**
+- State machines with non-native transitions (e.g., custom router edge cases)
+- Performance guarantees that must be proven
+- Race conditions and concurrency concerns
+- Complex temporal behavior that isn't natively supported
+
+**Simple behavior goes directly to Gherkin** - native browser events, standard CRUD operations, well-understood patterns.
+
+### Formal Model → Milestone Integration
+
+When formal models are used:
+1. **Analyze the concern** using appropriate formal method
+2. **Document findings** including edge cases and constraints
+3. **Update Milestone** with discovered requirements
+4. **Assess acceptability** - are the constraints acceptable or is design refinement needed?
+5. **Proceed to Gherkin** with updated understanding
+
+**TLA+ Requirement**: All TLA+ models must be backed by Alloy types, even if the Alloy model is mostly boilerplate for type definitions.
+
+### When Formal Models Are Not Used
+
+Most features proceed directly from **Division of Responsibility → Gherkin** when:
+- No data safety concerns exist
+- Behavior is simple and well-understood
+- No performance guarantees are required
+- No race conditions or complex state management
 
 ---
 
@@ -50,9 +104,10 @@ Iteration happens through **milestones** — discrete, versioned snapshots of tr
 | Layer                          | Description                                               | Artifact                               |
 | ------------------------------ | --------------------------------------------------------- | -------------------------------------- |
 | **Intent**                     | Defines purpose, goals, and constraints.                  | `/docs/intent.md`                      |
+| **Milestone**                  | Business requirements and success criteria.               | `/docs/milestones/vX.Y.Z.yaml`        |
 | **Resources**                  | Lists external systems and dependencies.                  | `/docs/architecture/vX.Y/resources.yaml` |
 | **Division of Responsibility** | Splits responsibilities across services and contexts.     | `/docs/architecture/vX.Y/responsibilities.yaml` |
-| **Formal Models**              | Validates static (Alloy) and dynamic (TLA⁺) consistency.  | `/docs/architecture/vX.Y/alloy/`, `/docs/architecture/vX.Y/tla/` |
+| **Formal Models**              | Conditional validation for specific concerns.             | `/docs/architecture/vX.Y/alloy/`, `/docs/architecture/vX.Y/tla/` (if needed) |
 | **Behavior**                   | Human-readable expected behavior (BDD).                   | `/docs/architecture/vX.Y/*.feature`   |
 | **Schemas**                    | Executable data contracts.                                | `/shared/schemas/`                     |
 | **Tests**                      | Enforce invariants, behaviors, and regressions.           | `/tests/`                              |
