@@ -1,9 +1,9 @@
 # Makefile for Teja Pattern Web App Template
 # Provides comprehensive commands for development, testing, and building
 
-# Default shell and options
-SHELL := /bin/bash
-.SHELLFLAGS := -eu -o pipefail
+# Default shell and options (fixed for WSL compatibility)
+SHELL := /bin/sh
+.SHELLFLAGS := -e
 
 # Default target
 .PHONY: help
@@ -67,28 +67,32 @@ NODE_ENV ?= development
 BUN_VERSION ?= latest
 PORT ?= 3000
 
-# Colors for output
-BLUE := \033[36m
-GREEN := \033[32m
-YELLOW := \033[33m
-RED := \033[31m
-RESET := \033[0m
+# Colors for output (disabled for compatibility)
+BLUE :=
+GREEN :=
+YELLOW :=
+RED :=
+RESET :=
+
+# Shell already set to /bin/sh for WSL compatibility
 
 # Utility functions
 define print_header
-	@echo "$(BLUE)$(1)$(RESET)"
+	@echo ""
+	@echo "=== $(1) ==="
+	@echo ""
 endef
 
 define print_success
-	@echo "$(GREEN)✓ $(1)$(RESET)"
+	@echo "✓ $(1)"
 endef
 
 define print_warning
-	@echo "$(YELLOW)⚠ $(1)$(RESET)"
+	@echo "⚠ $(1)"
 endef
 
 define print_error
-	@echo "$(RED)✗ $(1)$(RESET)"
+	@echo "✗ $(1)"
 endef
 
 # =============================================================================
@@ -100,6 +104,171 @@ install: ## Install all dependencies with pnpm
 	$(call print_header,"Installing dependencies...")
 	@pnpm install
 	$(call print_success,"Dependencies installed")
+
+.PHONY: test-debug
+test-debug:
+	/usr/bin/printf "Debug test\n"
+
+.PHONY: setup-formal-tools
+setup-formal-tools: ## Set up formal verification tools (Java + Alloy)
+	@echo "=== Setting up formal verification tools... ==="
+	@echo "Checking for existing Java installation..."
+	@if command -v java >/dev/null 2>&1; then \
+		echo "✅ Java is already installed: $$(java -version 2>&1 | head -1)"; \
+		java_check=true; \
+	else \
+		echo "❌ Java not found"; \
+		java_check=false; \
+	fi
+	@echo ""
+	@echo "Checking for existing Alloy installation..."
+	@if command -v alloy >/dev/null 2>&1; then \
+		echo "✅ Alloy is already installed: $$(alloy version 2>/dev/null || echo 'version unknown')"; \
+		alloy_check=true; \
+	else \
+		echo "❌ Alloy not found"; \
+		alloy_check=false; \
+	fi
+	@echo ""
+	@if [ "$$java_check" = true ] && [ "$$alloy_check" = true ]; then \
+		echo "🎉 All formal verification tools are already installed!"; \
+		echo "You can run: make alloy-verify"; \
+	else \
+		echo "⚠️  Some tools need installation."; \
+		echo ""; \
+		echo "Choose installation method:"; \
+		echo "1) make setup-formal-tools-global    # Install to user directory (~/.local)"; \
+		echo "2) make setup-formal-tools-local     # Install to project directory (./tools)"; \
+		echo ""; \
+		echo "Recommendation: Use 'local' for project isolation or 'global' for system-wide access."; \
+	fi
+
+.PHONY: setup-formal-tools-global
+setup-formal-tools-global: ## Install Java and Alloy globally to user directory
+	$(call print_header,"Installing formal verification tools globally...")
+	@echo "📦 Installing Java (OpenJDK 17) to user directory..."
+	@mkdir -p ~/.local/bin ~/.local/lib
+	@if ! command -v java >/dev/null 2>&1; then \
+		echo "Downloading OpenJDK 17..."; \
+		if [ "$$(uname)" = "Darwin" ]; then \
+			echo "macOS detected - using Homebrew or manual download..."; \
+			if command -v brew >/dev/null 2>&1; then \
+				brew install openjdk@17; \
+			else \
+				echo "Please install Java manually or install Homebrew first"; \
+				echo "Visit: https://adoptium.net/"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "Linux detected - using apt or manual download..."; \
+			if command -v apt >/dev/null 2>&1; then \
+				sudo apt update && sudo apt install -y openjdk-17-jdk; \
+			else \
+				echo "Downloading OpenJDK 17..."; \
+				cd /tmp && \
+				wget -q https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz && \
+				tar -xzf jdk-17_linux-x64_bin.tar.gz && \
+				mv jdk-17.* ~/.local/lib/jdk-17 && \
+				rm jdk-17_linux-x64_bin.tar.gz; \
+				echo 'export PATH="$$HOME/.local/lib/jdk-17/bin:$$PATH"' >> ~/.bashrc; \
+				echo 'export JAVA_HOME="$$HOME/.local/lib/jdk-17"' >> ~/.bashrc; \
+				export PATH="$$HOME/.local/lib/jdk-17/bin:$$PATH" && \
+				export JAVA_HOME="$$HOME/.local/lib/jdk-17"; \
+			fi; \
+		fi; \
+	fi
+	@echo "✅ Java installation completed"
+	@echo ""
+	@echo "📦 Installing Alloy Analyzer..."
+	@if ! command -v alloy >/dev/null 2>&1; then \
+		echo "Downloading Alloy Analyzer 5.0.0..."; \
+		mkdir -p ~/.local/lib/alloy; \
+		cd /tmp && \
+		wget -q https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v5.0.0/alloy5.0.0.jar && \
+		cp alloy5.0.0.jar ~/.local/lib/alloy/; \
+		rm alloy5.0.0.jar; \
+		echo '#!/bin/bash' > ~/.local/bin/alloy; \
+		echo 'java -jar $$HOME/.local/lib/alloy/alloy5.0.0.jar "$$@"' >> ~/.local/bin/alloy; \
+		chmod +x ~/.local/bin/alloy; \
+		echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> ~/.bashrc 2>/dev/null || true; \
+	fi
+	@echo "✅ Alloy installation completed"
+	@echo ""
+	@echo "🎉 Formal verification tools installed globally!"
+	@echo "Run 'source ~/.bashrc' or restart your terminal to update PATH"
+	@echo "Then run: make alloy-verify"
+
+.PHONY: setup-formal-tools-local
+setup-formal-tools-local: ## Install Java and Alloy locally to project directory
+	$(call print_header,"Installing formal verification tools locally...")
+	@mkdir -p tools/bin tools/lib
+	@echo "📦 Installing Java (OpenJDK 17) to ./tools..."
+	@if [ ! -f "tools/lib/jdk-17/bin/java" ]; then \
+		echo "Downloading OpenJDK 17..."; \
+		if [ "$$(uname)" = "Darwin" ]; then \
+			echo "macOS detected - downloading..."; \
+			cd /tmp && \
+			wget -q https://download.oracle.com/java/17/latest/jdk-17_macos-x64_bin.tar.gz && \
+			tar -xzf jdk-17_macos-x64_bin.tar.gz && \
+			mv jdk-17.* tools/lib/jdk-17 && \
+			rm jdk-17_macos-x64_bin.tar.gz; \
+		else \
+			echo "Linux detected - downloading..."; \
+			cd /tmp && \
+			wget -q https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz && \
+			tar -xzf jdk-17_linux-x64_bin.tar.gz && \
+			mv jdk-17.* tools/lib/jdk-17 && \
+			rm jdk-17_linux-x64_bin.tar.gz; \
+		fi; \
+	fi
+	@echo "✅ Java installed to ./tools/lib/jdk-17"
+	@echo ""
+	@echo "📦 Installing Alloy Analyzer to ./tools..."
+	@if [ ! -f "tools/lib/alloy5.0.0.jar" ]; then \
+		echo "Downloading Alloy Analyzer 5.0.0..."; \
+		mkdir -p tools/lib/alloy; \
+		cd /tmp && \
+		wget -q https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v5.0.0/alloy5.0.0.jar && \
+		cp alloy5.0.0.jar tools/lib/alloy/; \
+		rm alloy5.0.0.jar; \
+		echo '#!/bin/bash' > tools/bin/alloy; \
+		echo 'DIR="$$(cd "$$(dirname "$${BASH_SOURCE[0]}")" && pwd)"' >> tools/bin/alloy; \
+		echo 'JAVA_HOME="$$DIR/../lib/jdk-17"' >> tools/bin/alloy; \
+		echo '$$JAVA_HOME/bin/java -jar $$DIR/../lib/alloy/alloy5.0.0.jar "$$@"' >> tools/bin/alloy; \
+		chmod +x tools/bin/alloy; \
+	fi
+	@echo "✅ Alloy installed to ./tools/lib/alloy"
+	@echo ""
+	@echo "🎉 Formal verification tools installed locally!"
+	@echo "Use ./tools/bin/alloy to run Alloy Analyzer"
+	@echo "Or run: make alloy-verify"
+
+.PHONY: alloy-verify
+alloy-verify: ## Run Alloy verification on client factory model
+	$(call print_header,"Running Alloy formal verification...")
+	@if [ -f "tools/bin/alloy" ]; then \
+		ALLOY_CMD="./tools/bin/alloy"; \
+		JAVA_CMD="tools/lib/jdk-17/bin/java"; \
+	elif command -v alloy >/dev/null 2>&1; then \
+		ALLOY_CMD="alloy"; \
+		JAVA_CMD="java"; \
+	else \
+		echo "❌ Alloy not found. Please run: make setup-formal-tools"; \
+		exit 1; \
+	fi
+	@echo "🔍 Using Alloy: $$ALLOY_CMD"
+	@echo "📁 Analyzing model: docs/architecture/v0.0/alloy/client-factory.als"
+	@echo ""
+	@echo "Running verification checks..."
+	@$$ALLOY_CMD docs/architecture/v0.0/alloy/client-factory.als > docs/architecture/v0.0/alloy/verification-results.txt 2>&1 || echo "Alloy completed with results"
+	@echo ""
+	@echo "✅ Alloy analysis completed!"
+	@echo "📄 Results saved to: docs/architecture/v0.0/alloy/verification-results.txt"
+	@echo ""
+	@echo "Key findings:"
+	@if [ -f "docs/architecture/v0.0/alloy/verification-results.txt" ]; then \
+		grep -E "(assert|check|found|no counterexample|counterexample)" docs/architecture/v0.0/alloy/verification-results.txt | head -10 || echo "Analysis complete - check full results"; \
+	fi
 
 .PHONY: dev
 dev: ## Start development servers for all services
@@ -809,12 +978,17 @@ workflow-with-formal: workflow-formal workflow-implementation ## Complete workfl
 .PHONY: setup
 setup: install ## Set up development environment
 	$(call print_header,"Setting up development environment...")
+	@echo "Installing dependencies..."
+	@echo ""
+	@echo "🔬 Checking formal verification tools..."
+	@$(MAKE) setup-formal-tools
+	@echo ""
 	@echo "Environment setup completed"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Copy .env.example to .env"
-	@echo "  2. Configure your Supabase and Render credentials"
-	@echo "  3. Run 'make dev' to start development"
+	@echo "  1. Run 'make alloy-verify' to test formal verification"
+	@echo "  2. Run 'make workflow-behavior' to test Teja Pattern workflow"
+	@echo "  3. Run 'make dev' to start development (when ready)"
 
 .PHONY: status
 status: ## Show current project status

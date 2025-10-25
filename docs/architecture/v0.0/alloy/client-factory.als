@@ -57,9 +57,10 @@ fact ClientIsolation {
             (c1.process = c2.process and c1.thread = c2.thread) <=> c1 = c2
 }
 
--- INV-04: No circular dependencies
-fact NoCircularDependencies {
-    all c: Client | c not in ^c.dependencies
+-- INV-04: Clients are uniquely identified by process, thread, and type
+fact ClientUniqueness {
+    all c1, c2: Client |
+        (c1.process = c2.process and c1.thread = c2.thread and c1.type = c2.type) => c1 = c2
 }
 
 -- Client dependencies (optional, for future extensions)
@@ -86,8 +87,8 @@ assert ThreadIsolation {
     all f: Factory, t: ClientType, p: Process |
         all disj th1, th2: Thread |
             (th1.process = p and th2.process = p) =>
-                let c1 = (f.clients & Client <: type).t & (Client <: process).p & (Client <: thread).th1,
-                     c2 = (f.clients & Client <: type).t & (Client <: process).p & (Client <: thread).th2 |
+                let c1 = f.clients & (Client <: type).t & (Client <: process).p & (Client <: thread).th1,
+                     c2 = f.clients & (Client <: type).t & (Client <: process).p & (Client <: thread).th2 |
                 #c1 = 1 and #c2 = 1 implies c1 != c2
 }
 
@@ -111,13 +112,13 @@ run BasicClientFactory {
     some f: Factory |
         some c: f.clients |
         c.type = Database
-} for 2 Process, 2 Thread, 3 Client
+} for 2 Factory, 2 Process, 2 Thread, 3 Client, 3 ClientDependency, 3 Name
 
 -- Multiple clients test
 run MultipleClientTypes {
     some f: Factory |
         #f.clients >= 3
-} for 3 Process, 3 Thread, 5 Client
+} for 2 Factory, 3 Process, 3 Thread, 5 Client, 3 ClientDependency, 3 Name
 
 -- Thread isolation test
 run ThreadIsolationTest {
@@ -130,7 +131,7 @@ run ThreadIsolationTest {
                 some c2: f.clients |
                     c2.type = t and c2.process = p and c2.thread = th2 and
                 c1 != c2
-} for 3 Process, 4 Thread, 6 Client
+} for 2 Factory, 3 Process, 4 Thread, 6 Client, 3 ClientDependency, 3 Name
 
 -- Process isolation test
 run ProcessIsolationTest {
@@ -141,29 +142,29 @@ run ProcessIsolationTest {
             some c2: f.clients |
                 c2.type = t and c2.process = p2 and
             c1 != c2
-} for 3 Process, 3 Thread, 6 Client
+} for 2 Factory, 3 Process, 3 Thread, 6 Client, 3 ClientDependency, 3 Name
 
 -- Counterexample generation tests
 
 -- Test for potential violations
-check ProcessScopedClients for 3 Process, 3 Thread, 5 Client
-check ThreadIsolation for 3 Process, 4 Thread, 6 Client
-check FactoryTypeConsistency for 2 Factory, 3 Process, 3 Thread, 8 Client
-check ClientInitializationIdempotency for 2 Process, 2 Thread, 4 Client
+check ProcessScopedClients for 2 Factory, 3 Process, 3 Thread, 5 Client, 3 ClientDependency, 3 Name
+check ThreadIsolation for 2 Factory, 3 Process, 4 Thread, 6 Client, 3 ClientDependency, 3 Name
+check FactoryTypeConsistency for 2 Factory, 3 Process, 3 Thread, 8 Client, 3 ClientDependency, 3 Name
+check ClientInitializationIdempotency for 2 Factory, 2 Process, 2 Thread, 4 Client, 3 ClientDependency, 3 Name
 
 -- Performance tests
 run ScalabilityTest {
     #Process = 5 and #Thread = 10 and #Client = 20
-} for exactly 5 Process, exactly 10 Thread, exactly 20 Client
+} for exactly 2 Factory, exactly 5 Process, exactly 10 Thread, exactly 20 Client, exactly 5 ClientDependency, exactly 5 Name
 
 -- Edge case tests
 
 -- Single process, single thread
 run MinimalSystem {
     #Process = 1 and #Thread = 1 and #Client = 1
-} for exactly 1 Process, exactly 1 Thread, exactly 1 Client
+} for exactly 1 Factory, exactly 1 Process, exactly 1 Thread, exactly 1 Client, exactly 1 ClientDependency, exactly 1 Name
 
 -- Maximum complexity test
 run MaximumComplexity {
     #Factory = 3 and #Process = 5 and #Thread = 15 and #Client = 30
-} for exactly 3 Factory, exactly 5 Process, exactly 15 Thread, exactly 30 Client
+} for exactly 3 Factory, exactly 5 Process, exactly 15 Thread, exactly 30 Client, exactly 5 ClientDependency, exactly 5 Name

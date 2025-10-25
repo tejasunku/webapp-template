@@ -1,0 +1,244 @@
+# Division of Responsibility - v0.0.0
+# Service boundaries and responsibilities for client factory pattern validation
+
+# Service Definitions
+services:
+  client_factory:
+    name: "Client Factory Service"
+    purpose: "Provide thread-safe, process-scoped client instances"
+    layer: "SDK"
+
+  mock_services:
+    name: "Mock Service Adapters"
+    purpose: "Simulate external service clients for testing"
+    layer: "SDK"
+
+  validation_service:
+    name: "Pattern Validation Service"
+    purpose: "Validate client factory behavior and formal models"
+    layer: "Domain"
+
+# Responsibility Boundaries
+responsibilities:
+  client_factory:
+    primary:
+      - "Process-scoped client creation and management"
+      - "Thread ID change detection and client reinitialization"
+      - "Client lifecycle management (creation, reuse, cleanup)"
+      - "Client isolation enforcement"
+
+    secondary:
+      - "Client factory configuration and validation"
+      - "Error handling for client creation failures"
+      - "Resource cleanup and memory management"
+
+    boundaries:
+      - "Never directly access external services"
+      - "Never maintain global client state"
+      - "Never export client instances directly"
+      - "Only export pure async functions"
+
+  mock_services:
+    primary:
+      - "Simulate external service client behavior"
+      - "Track client creation and usage patterns"
+      - "Provide deterministic mock responses"
+      - "Maintain per-process/client isolation"
+
+    secondary:
+      - "Record client interactions for validation"
+      - "Simulate various failure scenarios"
+      - "Support concurrent access testing"
+
+    boundaries:
+      - "Never make actual network calls"
+      - "Never persist state beyond test lifecycle"
+      - "Never interfere with client factory logic"
+
+  validation_service:
+    primary:
+      - "Validate client factory behavior against specifications"
+      - "Test process/thread isolation properties"
+      - "Verify formal model predictions"
+      - "Generate test reports and coverage analysis"
+
+    secondary:
+      - "Edge case discovery and documentation"
+      - "Performance impact assessment"
+      - "Integration testing with formal model results"
+
+    boundaries:
+      - "Never modify client factory implementation"
+      - "Never interfere with mock service behavior"
+      - "Only observe and validate"
+
+# Service Interactions
+interactions:
+  - from: "client_factory"
+    to: "mock_services"
+    purpose: "Create and manage mock client instances"
+    contract: "Client Factory ’ Client Adapters"
+
+  - from: "validation_service"
+    to: "client_factory"
+    purpose: "Observe and validate client behavior"
+    contract: "Observer ’ Subject (read-only)"
+
+  - from: "validation_service"
+    to: "mock_services"
+    purpose: "Track client usage patterns and isolation"
+    contract: "Observer ’ Mock Services (read-only)"
+
+# Data Flow Boundaries
+data_flow:
+  client_creation:
+    input: "Client configuration parameters"
+    flow: "ValidationService ’ ClientFactory ’ MockService"
+    output: "Process-scoped client instance"
+    invariants:
+      - "Same process+thread combination gets same client"
+      - "Different process gets different client"
+      - "Thread change triggers client reinitialization"
+
+  client_access:
+    input: "Client access request"
+    flow: "Application ’ ClientFactory ’ Existing Client"
+    output: "Cached or reinitialized client"
+    invariants:
+      - "No client sharing across process boundaries"
+      - "Client reuse follows strict scoping rules"
+
+  validation_observation:
+    input: "Client factory behavior events"
+    flow: "ClientFactory ’ ValidationService"
+    output: "Validation reports and metrics"
+    invariants:
+      - "Observer does not modify observed behavior"
+      - "All isolation properties are verified"
+
+# Error Handling Responsibilities
+error_handling:
+  client_factory:
+    "Client creation failures":
+      responsibility: "Log error and throw descriptive exception"
+      boundaries: "Never create partial or invalid clients"
+
+    "Process ID detection failures":
+      responsibility: "Fallback to conservative client creation"
+      boundaries: "Never guess or assume process identity"
+
+    "Thread ID detection failures":
+      responsibility: "Treat as thread change and reinitialize"
+      boundaries: "Never share clients when thread safety uncertain"
+
+  mock_services:
+    "Mock initialization failures":
+      responsibility: "Fail fast with clear error messages"
+      boundaries: "Never provide partially initialized mocks"
+
+    "Concurrent access conflicts":
+      responsibility: "Simulate realistic service behavior"
+      boundaries: "Never interfere with client factory isolation"
+
+  validation_service:
+    "Observation failures":
+      responsibility: "Log warnings and continue validation"
+      boundaries: "Never stop client factory operation"
+
+# Formal Model Concerns
+formal_model_concerns:
+  # These sections identify which formal models might be needed
+
+  structural_concerns:
+    - "Client isolation properties need Alloy analysis"
+    - "Process/thread relationship modeling required"
+    - "Resource sharing patterns need verification"
+    - "Client lifecycle invariants need formal proof"
+
+  temporal_concerns:
+    - "Concurrent client access patterns may need TLA+ analysis"
+    - "Race conditions in client creation/reuse"
+    - "Resource cleanup timing and ordering"
+    - "Performance guarantees under concurrent load"
+
+  simple_behaviors:
+    - "Basic client creation and reuse (skip formal models)"
+    - "Deterministic mock service responses"
+    - "Static configuration validation"
+    - "Simple property access patterns"
+
+# Decision Criteria for Formal Models
+formal_model_triggers:
+  alloy_required:
+    because: "Client isolation is a structural invariant"
+    concern: "Data safety - clients must not be shared across processes"
+    complexity: "Multiple processes/threads with complex relationships"
+
+  tla_plus_required:
+    because: "Concurrent access may create race conditions"
+    concern: "Performance guarantees - client access under concurrent load"
+    complexity: "State machine with non-trivial transitions"
+
+  direct_to_gherkin:
+    behaviors:
+      - "Basic client creation and configuration"
+      - "Simple mock service responses"
+      - "Deterministic error handling"
+      - "Static property validation"
+
+# Integration Points
+integration_points:
+  shared_adapters:
+    location: "/shared/sdk/"
+    components:
+      - "clientFactory.ts - Main factory implementation"
+      - "adapters/mock/ - Mock service implementations"
+
+  formal_models:
+    location: "/docs/architecture/v0.0/"
+    components:
+      - "alloy/client-factory.als - Structural analysis"
+      - "tla/client-factory.tla - Temporal analysis (if needed)"
+
+  validation:
+    location: "/tests/validation/"
+    components:
+      - "client-factory.test.ts - Behavior validation"
+      - "isolation.test.ts - Process/thread separation tests"
+
+# Success Metrics
+success_metrics:
+  client_factory:
+    isolation_guarantee: "100% - no cross-process client sharing"
+    thread_safety: "100% - no race conditions in concurrent access"
+    performance: "< 1ms for client creation/reuse"
+
+  formal_models:
+    alloy_coverage: "All structural invariants verified"
+    tla_plus_coverage: "Temporal properties verified (if applicable)"
+    decision_accuracy: "Formal model usage matches criteria"
+
+  validation:
+  test_coverage: "> 95% for critical paths"
+  edge_case_discovery: "All formal model predictions validated"
+  documentation_traceability: "All tests trace to Gherkin scenarios"
+
+# Governance Requirements
+governance:
+  code_standards:
+    - "TypeScript strict mode enabled"
+    - "All async functions properly typed"
+    - "Error handling follows established patterns"
+    - "No top-level side effects"
+
+  documentation_standards:
+    - "All functions have JSDoc comments"
+    - "Formal model decisions are documented"
+    - "Traceability from requirements to implementation"
+    - "Edge cases are documented with examples"
+
+  testing_standards:
+    - "All Gherkin scenarios have corresponding tests"
+    - "Formal model predictions are validated"
+    - "Edge cases are covered by integration tests"
+    - "Performance characteristics are measured"

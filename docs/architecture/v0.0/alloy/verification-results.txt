@@ -1,0 +1,22 @@
+00. run   BasicClientFactory       0    1/1     SAT
+
+01. run   MultipleClientTypes      0    1/1     SAT
+
+02. run   ThreadIsolationTest      0    1/1     SAT
+
+03. run   ProcessIsolationTest     0    1/1     SAT
+
+04. check ProcessScopedClients     0       UNSAT
+05. check ThreadIsolation          0       UNSAT
+06. check FactoryTypeConsistency     0       UNSAT
+07. check ClientInitializationIdempotency     0       UNSAT
+08. run   ScalabilityTest          0    1/1     SAT
+
+09. run   MinimalSystem            0    1/1     SAT
+
+10. run   MaximumComplexity        0    1/1     SAT
+
+Warning
+  0. line 73, column 6 (73,6), filename=/mnt/c/Users/tejasunku/Documents/Github/webapp-template/docs/architecture/v0.0/alloy/client-factory.als The join operation here always yields an empty set.
+Left type = {this/Client}
+Right type = {this/ClientDependency->this/Client}

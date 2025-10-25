@@ -1,80 +1,102 @@
 # Architecture Resources - v0.0
-# Configuration notes for external services and platforms
+# Local development environment configuration for client factory pattern validation
 
-## Hosting Providers
+## Development Environment
 
-### Render
-- **Type**: PaaS for application hosting
-- **Purpose**: Main backend services
-- **Billing**: Per image served (bundle multiple services per image to save costs)
-- **Services**:
-  - Backend API (ElysiaJS)
-  - Frontend web app
-  - Background workers
-- **Redis Service**: Redis-compatible, recent enough version for Redis Streams
-- **Notes**:
-  - Use environment variables for configuration
-  - Health checks required for all services
-  - Bundle services together when possible to reduce costs
+### Local Development Setup
+- **Method**: Local development with Node.js/Bun runtime
+- **Purpose**: Validate client factory pattern and Shared Adapter Protocol
+- **Scope**: Process and thread management without external dependencies
+- **Runtime**: Bun (≥ 1.1) or Node.js (≥ 18)
 
-### Supabase
-- **Type**: Backend-as-a-Service
-- **Purpose**: Managed database and auth
-- **Services**:
-  - PostgreSQL database (managed)
-  - Authentication service (managed)
-  - Storage (managed)
-  - Edge functions (inactive for now)
-- **Notes**:
-  - Use Supabase client SDK for connections
-  - Database accessed through Supabase client, not direct connections
-  - Auth flows handled through Supabase Auth
+### Package Management
+- **Tool**: pnpm
+- **Monorepo**: pnpm workspaces
+- **Workspace Structure**: Apps, shared packages, documentation
 
-## Database & Storage
+## Development Tools
 
-### PostgreSQL (via Supabase)
-- **Provider**: Supabase
-- **ORM**: Drizzle ORM (v0.30+)
-- **Connection**: Through Supabase client
-- **Migrations**: Drizzle Kit CLI
-- **Driver**: postgres.js (Bun-compatible)
+### Formal Verification Tools
+- **Alloy Analyzer**: For static structural analysis of client factory
+- **TLA+ Toolbox**: For temporal behavior analysis (if needed)
+- **Purpose**: Validate client isolation and thread safety properties
 
-### Storage (via Supabase)
-- **Provider**: Supabase Storage
-- **Purpose**: File uploads, user assets
-- **Access**: Supabase SDK
+### Runtime Environment
+- **Process Management**: Native Node.js/Bun process handling
+- **Thread Simulation**: Worker threads for concurrent access testing
+- **Resource Monitoring**: Memory and process tracking for validation
 
-## Cache & Queue
+## Simulated Resources
 
-### Redis (via Render)
-- **Provider**: Render Redis
-- **Version**: Recent enough for Redis Streams (>5.0)
-- **Uses**:
-  - Caching layer
-  - Redis Streams for job queues
-- **Notes**:
-  - Same instance for both cache and queues
-  - Use different key prefixes to separate concerns
-  - Connection managed through environment variables
+### Mock Service Adapters
+- **Purpose**: Simulate external service clients for factory testing
+- **Types**: Database client, Cache client, Queue client
+- **Implementation**: Simple mock objects with state tracking
+- **Isolation**: Each mock should be scoped per process/thread
 
-## Authentication
+### Test Process Simulation
+- **Process ID Changes**: Simulated through PID manipulation
+- **Thread ID Changes**: Worker thread creation/destruction
+- **Client Lifecycle**: Creation, reuse, reinitialization tracking
 
-### Supabase Auth
-- **Provider**: Supabase
-- **Purpose**: User authentication and session management
-- **Integration**: Supabase client SDK
-- **Notes**:
-  - Handles login/logout flows
-  - Token management built-in
-  - User roles and permissions
+## Environment Variables
 
-## External APIs
+### Development Configuration
+```bash
+# Development mode
+NODE_ENV=development
 
-### AI Services (Future)
-- **Provider**: OpenRouter (via Vercel AI SDK)
-- **Purpose**: AI model integration
-- **SDK**: @ai-sdk
-- **Validation**: Valibot schemas for structured responses
+# Client factory testing
+CLIENT_FACTORY_TEST_MODE=true
+MOCK_SERVICES_ENABLED=true
+
+# Formal verification paths (if needed)
+ALLOY_MODEL_PATH=docs/architecture/v0.0/alloy
+TLA_MODEL_PATH=docs/architecture/v0.0/tla
+```
+
+## Resource Constraints (v0.0.0)
+
+### What's Available
+- Local process and thread management
+- Mock service adapters for testing
+- Formal verification tools (Alloy/TLA+)
+- Basic file system and memory operations
+
+### What's Not Available
+- External database connections
+- Network service calls
+- Authentication systems
+- Cache/storage services
+- Production deployment resources
+
+## Service Dependencies (v0.0.0)
+
+```
+Client Factory → Mock Service Adapters (local)
+Formal Models → Alloy/TLA+ Analysis Tools (local)
+Testing Framework → Process/Thread Simulation (local)
+```
+
+## Configuration Notes
+
+### Client Factory Configuration
+- No external service connections required
+- Use mock adapters for all external dependencies
+- Focus on process/thread isolation properties
+- Validate client lifecycle management
+
+### Formal Model Integration
+- Alloy models for structural properties (client isolation)
+- TLA+ models for temporal properties (if concurrent access needed)
+- Models should be executable with local tools
+- Results should inform milestone specifications
+
+### Testing Strategy
+- Unit tests for client factory behavior
+- Integration tests for process/thread changes
+- Formal model verification for mathematical properties
+- Edge case testing for race conditions and resource management
 
 ## Development Environment
 
