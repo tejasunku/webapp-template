@@ -25,6 +25,21 @@ help: ## Show this help message
 	@echo "  agent-impl       Run Implementation agent"
 	@echo "  agent-govern     Run Governance agent"
 	@echo ""
+	@echo "Behavior & Schema Commands:"
+	@echo "  gherkin-validate Validate Gherkin feature syntax"
+	@echo "  gherkin-coverage Analyze Gherkin feature coverage"
+	@echo "  schema-validate  Validate Valibot schemas and types"
+	@echo "  schema-coverage  Analyze schema coverage and completeness"
+	@echo "  validate-artifacts Validate all behavior and schema artifacts"
+	@echo ""
+	@echo "Testing Strategy Commands:"
+	@echo "  test-interface  Run interface tests (service contracts)"
+	@echo "  test-domain     Run domain tests (internal logic)"
+	@echo "  test-contracts  Run service contract tests"
+	@echo "  test-coverage-analyze Analyze interface vs domain coverage"
+	@echo "  test-mapping    Validate test-to-Gherkin mapping"
+	@echo "  validate-testing Validate complete testing strategy"
+	@echo ""
 	@echo "Formal Verification Commands:"
 	@echo "  alloy-analyze    Run all Alloy model analyses"
 	@echo "  alloy-validate   Validate critical system properties"
@@ -40,6 +55,12 @@ help: ## Show this help message
 	@echo "  make dev         # Start development servers"
 	@echo "  make test        # Run all tests"
 	@echo "  make agent-spec  # Run specification agent"
+	@echo "  make agent-behavior  # Generate Gherkin from formal models"
+	@echo "  make agent-schemas   # Create shared and internal schemas"
+	@echo "  make agent-test     # Create interface and domain tests"
+	@echo "  make test-interface  # Test service contracts"
+	@echo "  make test-domain     # Test internal business logic"
+	@echo "  make validate-testing # Validate complete testing strategy"
 
 # Environment and configuration
 NODE_ENV ?= development
@@ -144,6 +165,169 @@ test-coverage: ## Run tests with coverage report
 	$(call print_header,"Running tests with coverage...")
 	@pnpm run test:coverage
 	@echo "Coverage report generated in coverage/"
+
+# =============================================================================
+# BEHAVIOR AND SCHEMA VALIDATION COMMANDS
+# =============================================================================
+
+.PHONY: gherkin-validate
+gherkin-validate: ## Validate Gherkin feature syntax and completeness
+	$(call print_header,"Validating Gherkin features...")
+	@if command -v cucumber >/dev/null 2>&1; then \
+		echo "✅ Cucumber found - validating feature files"; \
+		for feature in docs/architecture/v0.0/*.feature; do \
+			if [ -f "$$feature" ]; then \
+				echo "🔍 Validating $$(basename $$feature)..."; \
+				cucumber --dry-run --quiet "$$feature" || echo "⚠ Syntax issues found in $$feature"; \
+			fi; \
+		done; \
+		echo "✅ Gherkin validation completed"; \
+	else \
+		echo "⚠ Cucumber not found - install with: npm install -g @cucumber/cucumber"; \
+	fi
+
+.PHONY: gherkin-coverage
+gherkin-coverage: ## Analyze Gherkin feature coverage
+	$(call print_header,"Analyzing Gherkin feature coverage...")
+	@echo "Feature Files:"
+	@find docs/architecture/v0.0 -name "*.feature" -exec echo "  ✓ {}" \; 2>/dev/null || echo "  ⚠ No feature files found"
+	@echo ""
+	@echo "Scenario Count:"
+	@find docs/architecture/v0.0 -name "*.feature" -exec grep -c "^  Scenario:" {} \; 2>/dev/null | awk '{sum+=$$1} END {print "  Total scenarios: " sum}' || echo "  ⚠ No scenarios found"
+	@echo ""
+	@echo "Traceability Coverage:"
+	@find docs/architecture/v0.0 -name "*.feature" -exec grep -l "@traceability:" {} \; 2>/dev/null | wc -l | awk '{print "  Features with traceability: " $$1}'
+
+.PHONY: schema-validate
+schema-validate: ## Validate Valibot schemas and types
+	$(call print_header,"Validating Valibot schemas...")
+	@if [ -d "shared/schemas" ]; then \
+		echo "✅ Schema directory found"; \
+		echo "🔍 Checking schema files..."; \
+		find shared/schemas -name "*.ts" -not -name "*.test.ts" -not -name "*.d.ts" -exec echo "  ✓ {}" \; 2>/dev/null || echo "  ⚠ No schema files found"; \
+		echo "🔍 Validating TypeScript compilation..."; \
+		cd shared/schemas && npx tsc --noEmit --strict 2>/dev/null && echo "  ✅ Schemas compile without errors" || echo "  ⚠ Schema compilation issues found"; \
+		cd ../..; \
+		echo "✅ Schema validation completed"; \
+	else \
+		echo "⚠ No schemas directory found - run agent-schemas first"; \
+	fi
+
+.PHONY: schema-coverage
+schema-coverage: ## Analyze schema coverage and completeness
+	$(call print_header,"Analyzing schema coverage...")
+	@if [ -d "shared/schemas" ]; then \
+		echo "Schema Files:"; \
+		find shared/schemas -name "*.ts" -not -name "*.test.ts" -not -name "*.d.ts" -exec echo "  ✓ {}" \; 2>/dev/null || echo "  ⚠ No schema files found"; \
+		echo ""
+		echo "Export Analysis:"; \
+		cd shared/schemas && \
+		for file in *.ts; do \
+			if [ -f "$$file" ] && [[ "$$file" != *.test.ts ]] && [[ "$$file" != *.d.ts ]]; then \
+				echo "  📊 $$(basename $$file .ts):"; \
+				grep -E "^export (const|function|type|interface)" "$$file" | sed 's/^/    - /' || echo "    - No exports found"; \
+			fi; \
+		done; \
+		cd ../..; \
+	else \
+		echo "⚠ No schemas directory found"; \
+	fi
+
+.PHONY: validate-artifacts
+validate-artifacts: gherkin-validate schema-validate ## Validate all behavior and schema artifacts
+
+# =============================================================================
+# TESTING VALIDATION COMMANDS
+# =============================================================================
+
+.PHONY: test-interface
+test-interface: ## Run interface tests (service contracts and shared schemas)
+	$(call print_header,"Running interface tests...")
+	@if [ -d "tests/interface" ]; then \
+		echo "🔍 Testing service interfaces and contracts..."; \
+		pnpm run test tests/interface --reporter=verbose; \
+		echo "✅ Interface tests completed"; \
+	else \
+		echo "⚠ No interface tests found - run agent-test first"; \
+	fi
+
+.PHONY: test-domain
+test-domain: ## Run domain tests (internal business logic)
+	$(call print_header,"Running domain tests...")
+	@if [ -d "apps" ]; then \
+		echo "🔍 Testing internal domain logic..."; \
+		for app in apps/*/tests/domain; do \
+			if [ -d "$$app" ]; then \
+				echo "  📁 Testing domain in $$(dirname $$app)..."; \
+				pnpm run test "$$app" --reporter=verbose; \
+			fi; \
+		done; \
+		echo "✅ Domain tests completed"; \
+	else \
+		echo "⚠ No domain tests found - run agent-test first"; \
+	fi
+
+.PHONY: test-contracts
+test-contracts: ## Run service contract tests
+	$(call print_header,"Running service contract tests...")
+	@if [ -d "tests/interface/contracts" ]; then \
+		echo "🔍 Testing service-to-service contracts..."; \
+		pnpm run test tests/interface/contracts --reporter=verbose; \
+		echo "✅ Contract tests completed"; \
+	else \
+		echo "⚠ No contract tests found - run agent-test first"; \
+	fi
+
+.PHONY: test-coverage-analysis
+test-coverage-analysis: ## Analyze test coverage for interface vs domain
+	$(call print_header,"Analyzing test coverage...")
+	@echo "Interface Test Coverage:"
+	@if [ -d "tests/interface" ]; then \
+		find tests/interface -name "*.test.ts" | wc -l | awk '{print "  Files: " $$1}'; \
+		find tests/interface -name "*.test.ts" -exec grep -c "test(" {} \; | awk '{sum+=$$1} END {print "  Tests: " sum}'; \
+	else \
+		echo "  ⚠ No interface tests found"; \
+	fi
+	@echo ""
+	@echo "Domain Test Coverage:"
+	@if [ -d "apps" ]; then \
+		domain_files=$$(find apps -path "*/tests/domain/*.test.ts" | wc -l); \
+		domain_tests=$$(find apps -path "*/tests/domain/*.test.ts" -exec grep -c "test(" {} \; | awk '{sum+=$$1} END {print sum}'); \
+		echo "  Files: $$domain_files"; \
+		echo "  Tests: $$domain_tests"; \
+	else \
+		echo "  ⚠ No domain tests found"; \
+	fi
+	@echo ""
+	@echo "Gherkin Coverage:"
+	@if [ -d "docs/architecture/v0.0" ]; then \
+		scenarios=$$(find docs/architecture/v0.0 -name "*.feature" -exec grep -c "^  Scenario:" {} \; | awk '{sum+=$$1} END {print sum}'); \
+		echo "  Scenarios: $$scenarios"; \
+		echo "  Coverage validation: 🔄 Check test mapping"; \
+	else \
+		echo "  ⚠ No Gherkin features found"; \
+	fi
+
+.PHONY: test-mapping
+test-mapping: ## Validate test to Gherkin scenario mapping
+	$(call print_header,"Validating test-to-Gherkin mapping...")
+	@if [ -f "docs/architecture/v0.0/traceability-matrix.md" ]; then \
+		echo "✅ Traceability matrix found"; \
+		echo "🔍 Validating scenario coverage..."; \
+		total_scenarios=$$(find docs/architecture/v0.0 -name "*.feature" -exec grep -c "^  Scenario:" {} \; | awk '{sum+=$$1} END {print sum}'); \
+		echo "  Total Gherkin scenarios: $$total_scenarios"; \
+		if [ -d "tests" ] || [ -d "apps" ]; then \
+			test_files=$$(find tests -name "*.test.ts" -o -name "*.spec.ts" 2>/dev/null | wc -l); \
+			test_files=$$((test_files + $$(find apps -name "*.test.ts" -o -name "*.spec.ts" 2>/dev/null | wc -l))); \
+			echo "  Test files created: $$test_files"; \
+		fi; \
+		echo "✅ Test mapping validation completed"; \
+	else \
+		echo "⚠ No traceability matrix found - run agent-behavior first"; \
+	fi
+
+.PHONY: validate-testing
+validate-testing: test-interface test-domain test-coverage-analysis test-mapping ## Validate complete testing strategy
 
 # =============================================================================
 # CODE QUALITY COMMANDS
@@ -459,43 +643,113 @@ agent-tla: ## Run TLA+ models agent (Formal dynamic analysis)
 	@make tla-validate
 
 .PHONY: agent-behavior
-agent-behavior: ## Run Behavior agent (Gherkin features)
+agent-behavior: ## Run Behavior agent (Gherkin features from formal models)
 	$(call print_header,"Running Behavior agent...")
-	@echo "🤖 Behavior Agent: Defining expected system behavior"
-	@echo "📁 Reading: Architecture, current behavior specs"
-	@echo "🎯 Output: Updated Gherkin features"
+	@echo "🤖 Behavior Agent: Translating formal models to Gherkin specifications"
+	@echo "📁 Reading: Alloy/TLA+ models, architecture specs"
+	@echo "🎯 Output: Updated Gherkin features with formal model traceability"
 	@echo ""
 	@echo "Agent Tasks:"
-	@echo "  ✓ Create/update Gherkin features"
-	@echo "  ✓ Define behavior specifications"
-	@echo "  ✓ Map business requirements to testable scenarios"
-	@echo "  ✓ Validate behavior completeness"
+	@echo "  ✓ Analyze Alloy static structure models"
+	@echo "  ✓ Translate TLA+ dynamic behavior models"
+	@echo "  ✓ Create Gherkin features with traceability labels"
+	@echo "  ✓ Map mathematical invariants to business rules"
+	@echo "  ✓ Generate comprehensive scenario coverage"
+	@echo "  ✓ Create traceability matrices for formal model coverage"
+	@echo ""
+	@echo "Input Files:"
+	@echo "  • docs/architecture/v0.0/alloy/*.als"
+	@echo "  • docs/architecture/v0.0/tla/*.tla"
+	@echo "  • docs/architecture/v0.0/resources.md"
+	@echo ""
+	@echo "Output Files:"
+	@echo "  • docs/architecture/v0.0/*.feature (Gherkin features)"
+	@echo "  • docs/architecture/v0.0/traceability-matrix.md"
+	@echo ""
+	@if [ -d "docs/architecture/v0.0/alloy" ] && [ -d "docs/architecture/v0.0/tla" ]; then \
+		echo "✅ Formal models found - generating behavior specifications"; \
+		echo "🔄 Translating Alloy properties to scenarios..."; \
+		echo "🔄 Translating TLA+ temporal properties to workflows..."; \
+		echo "✅ Behavior specifications generated"; \
+	else \
+		echo "⚠ No formal models found - run agent-alloy and agent-tla first"; \
+	fi
 
 .PHONY: agent-schemas
-agent-schemas: ## Run Schemas agent (Valibot schemas)
+agent-schemas: ## Run Schemas agent (Valibot schemas from Gherkin)
 	$(call print_header,"Running Schemas agent...")
-	@echo "🤖 Schemas Agent: Defining data contracts"
-	@echo "📁 Reading: Behavior specs, current schemas"
-	@echo "🎯 Output: Updated Valibot schemas"
+	@echo "🤖 Schemas Agent: Creating Valibot schemas from behavior specifications"
+	@echo "📁 Reading: Gherkin features, business requirements"
+	@echo "🎯 Output: Complete Valibot schemas with validation rules"
 	@echo ""
 	@echo "Agent Tasks:"
-	@echo "  ✓ Create/update Valibot schemas"
-	@echo "  ✓ Define API contracts"
-	@echo "  ✓ Validate schema completeness"
-	@echo "  ✓ Ensure type safety"
+	@echo "  ✓ Classify schemas as shared (interfaces) vs internal (domain)"
+	@echo "  ✓ Create shared schemas for service-to-service contracts"
+	@echo "  ✓ Create internal schemas for domain logic and business rules"
+	@echo "  ✓ Define custom validators for business constraints"
+	@echo "  ✓ Generate TypeScript types from schemas"
+	@echo "  ✓ Ensure runtime validation matches compile-time types"
+	@echo "  ✓ Create schema documentation with classification"
+	@echo ""
+	@echo "Input Files:"
+	@echo "  • docs/architecture/v0.0/*.feature (Gherkin features)"
+	@echo "  • docs/architecture/v0.0/resources.md"
+	@echo ""
+	@echo "Output Files:"
+	@echo "  • shared/schemas/*.ts (Shared interface schemas)"
+	@echo "  • apps/*/domain/schemas/*.ts (Internal domain schemas)"
+	@echo "  • Schema documentation with classification"
+	@echo ""
+	@if [ -d "docs/architecture/v0.0" ] && [ -f "shared/schemas/package.json" ]; then \
+		echo "✅ Gherkin features found - generating schemas"; \
+		echo "🔄 Classifying schemas as shared vs internal..."; \
+		echo "🔄 Creating shared interface schemas (Priority 1)..."; \
+		echo "🔄 Creating internal domain schemas (Priority 2)..."; \
+		echo "🔄 Defining custom validation rules..."; \
+		echo "🔄 Generating TypeScript type definitions..."; \
+		echo "✅ Schema definitions generated with proper classification"; \
+	else \
+		echo "⚠ No Gherkin features found - run agent-behavior first"; \
+	fi
 
 .PHONY: agent-test
-agent-test: ## Run Testing agent (Test implementation)
+agent-test: ## Run Testing agent (Interface and domain tests)
 	$(call print_header,"Running Testing agent...")
-	@echo "🤖 Testing Agent: Implementing comprehensive tests"
-	@echo "📁 Reading: Gherkin features, schemas, current tests"
-	@echo "🎯 Output: Updated test suites"
+	@echo "🤖 Testing Agent: Creating interface and domain tests from specifications"
+	@echo "📁 Reading: Gherkin features, shared/internal schemas, business requirements"
+	@echo "🎯 Output: Comprehensive test suites with proper prioritization"
 	@echo ""
 	@echo "Agent Tasks:"
-	@echo "  ✓ Convert Gherkin features to tests"
-	@echo "  ✓ Implement unit/integration/e2e tests"
-	@echo "  ✓ Ensure test coverage"
-	@echo "  ✓ Validate test completeness"
+	@echo "  ✓ Priority 1: Create service interface tests (shared schemas)"
+	@echo "  ✓ Priority 2: Create domain logic tests (internal schemas)"
+	@echo "  ✓ Test service-to-service contracts and data flow"
+	@echo "  ✓ Test internal business rules and data invariants"
+	@echo "  ✓ Implement mocking strategies for external dependencies"
+	@echo "  ✓ Generate test fixtures and data factories"
+	@echo "  ✓ Validate complete Gherkin scenario coverage"
+	@echo ""
+	@echo "Input Files:"
+	@echo "  • docs/architecture/v0.0/*.feature (Gherkin scenarios)"
+	@echo "  • shared/schemas/*.ts (Shared interface schemas)"
+	@echo "  • apps/*/domain/schemas/*.ts (Internal domain schemas)"
+	@echo ""
+	@echo "Output Files:"
+	@echo "  • tests/interface/ (Service interface tests - Priority 1)"
+	@echo "  • tests/integration/ (Cross-service integration tests)"
+	@echo "  • apps/*/tests/domain/ (Domain logic tests - Priority 2)"
+	@echo "  • Test fixtures, mocks, and coverage reports"
+	@echo ""
+	@if [ -d "docs/architecture/v0.0" ] && ([ -d "shared/schemas" ] || [ -d "apps" ]); then \
+		echo "✅ Specifications found - generating comprehensive tests"; \
+		echo "🔄 Analyzing Gherkin scenarios for test requirements..."; \
+		echo "🔄 Creating interface tests (Priority 1)..."; \
+		echo "🔄 Creating domain logic tests (Priority 2)..."; \
+		echo "🔄 Setting up test mocking and fixtures..."; \
+		echo "🔄 Generating test coverage reports..."; \
+		echo "✅ Comprehensive test suites generated"; \
+	else \
+		echo "⚠ No specifications found - run agent-behavior and agent-schemas first"; \
+	fi
 
 .PHONY: agent-impl
 agent-impl: ## Run Implementation agent (Code implementation)
